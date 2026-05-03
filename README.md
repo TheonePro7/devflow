@@ -25,19 +25,21 @@ Phase 6: Finish           → superpowers-finishing-a-development-branch
 ## Install
 
 ```bash
-# 1. Install prerequisites
+# 1. Install prerequisites (one-time)
 npm install -g gitnexus
 go install github.com/gastownhall/beads/cmd/bd@latest
 
-# 2. Install superpowers (Claude Code plugin marketplace)
+# 2. Install superpowers (one-time, Claude Code plugin marketplace)
 /plugin install superpowers@claude-plugins-official
 
-# 3. Install this skill
+# 3. Install this skill (one-time)
 git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
 
-# 4. Init project
-bd init
-npx gitnexus analyze --force
+# 4. Init project (per project — run from project root)
+# PowerShell:
+.\setup.ps1
+# or bash:
+# bash setup.sh
 ```
 
 ## Usage
@@ -55,6 +57,8 @@ devflow/
 │   ├── spec-reviewer-prompt.md
 │   ├── code-quality-reviewer-prompt.md
 │   └── code-reviewer-prompt.md
+├── setup.ps1        # Project setup (Windows PowerShell)
+├── setup.sh         # Project setup (macOS/Linux bash)
 ├── README.md
 ├── LICENSE          # MIT
 └── .gitignore

@@ -1,9 +1,16 @@
 ---
 name: devflow
-description: 7-phase standard development workflow (Phase 0-6). Triggers on any development task — build, fix, refactor, optimize. Routes through brainstorm → plan → worktree → implement → review → finish, invoking tdd and superpowers skills at each phase.
+description: IMPORTANT — 7-PHASE WORKFLOW. Triggers on ANY development task. FIRST do Phase 1 (Brainstorming). DO NOT skip to implementation. Phase order is MANDATORY.
 ---
 
 # Standard Development Workflow
+
+## CRITICAL RULES — Read First
+
+1. **Phase order is MANDATORY.** Do NOT skip to implementation.
+2. **Phase 1 (Brainstorming) MUST run first** — analyze requirements, clarify with user, get sign-off.
+3. **No code without Phase 1 + Phase 2 sign-off.** User must approve spec AND plan before any implementation.
+4. If user doesn't mention a phase, start from Phase 1 anyway.
 
 ## Architecture
 

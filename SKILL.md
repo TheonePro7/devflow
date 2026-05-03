@@ -11,6 +11,7 @@ This skill is the **orchestrator**. It does not replace the specialized skills â
 
 | Phase | Routes to |
 |-------|-----------|
+| 0. Environment Check | auto-detect (beads + gitnexus + prompts) |
 | 1. Brainstorming | `superpowers-brainstorming` |
 | 2. Writing Plans | `superpowers-writing-plans` |
 | 3. Git Worktree | `superpowers-using-git-worktrees` |
@@ -49,18 +50,17 @@ Phase 6: Finish (superpowers-finishing-a-development-branch)
 
 ## Setup for New Project
 
-To use this workflow in a new project:
-
 ```bash
-# 1. Superpowers & TDD (one-time, any project)
-# Already installed globally if you see this skill.
+# 1. From project root, run setup script:
+# PowerShell:
+.\setup.ps1
+# or bash:
+# bash setup.sh
 
-# 2. Initialize project context
+# 2. Or manually:
 bd init                                            # beads tracker
 npx gitnexus analyze --force                       # code graph index
-
-# 3. Copy workflow.md + prompts (from existing project template)
-# Or just start â€” this skill routes to the right phases automatically.
+# prompts are auto-copied by setup script
 ```
 
 ## Prerequisites

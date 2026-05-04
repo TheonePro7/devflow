@@ -2,14 +2,12 @@
 .SYNOPSIS
     Initialize devflow workflow in a new project.
 .DESCRIPTION
-    Checks prerequisites, initializes beads, builds gitnexus index,
-    and copies prompt templates to .claude/prompts/.
+    Checks prerequisites, initializes beads, and builds gitnexus index.
 #>
 
 $ErrorActionPreference = "Stop"
-$DevflowDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-Write-Host "=== devflow setup ===" -ForegroundColor Cyan
+Write-Host "=== devflow setup (Phase 1) ===" -ForegroundColor Cyan
 Write-Host ""
 
 # ---- Step 1: Check prerequisites ----
@@ -51,25 +49,11 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "[FAIL] gitnexus analyze failed — run 'npx gitnexus analyze . --force' manually" -ForegroundColor Red
 }
 
-# ---- Step 4: Copy prompts ----
-Write-Host ""
-Write-Host "--- prompts ---" -ForegroundColor Yellow
-$TargetPromptDir = ".claude/prompts"
-if (-not (Test-Path $TargetPromptDir)) {
-    New-Item -ItemType Directory -Path $TargetPromptDir -Force | Out-Null
-}
-$SourcePromptDir = Join-Path $DevflowDir "prompts"
-if (Test-Path $SourcePromptDir) {
-    Copy-Item -Path (Join-Path $SourcePromptDir "*.md") -Destination $TargetPromptDir -Force
-    Write-Host "[PASS] prompts copied to $TargetPromptDir" -ForegroundColor Green
-} else {
-    Write-Host "[WARN] prompts directory not found at $SourcePromptDir" -ForegroundColor Yellow
-}
-
-# ---- Step 5: Summary ----
+# ---- Step 4: Summary ----
 Write-Host ""
 Write-Host "=== devflow ready ===" -ForegroundColor Cyan
-Write-Host "  globals:  tdd (mattpocock) + superpowers-* (14 skills)" -ForegroundColor Gray
-Write-Host "  project:  beads + gitnexus + prompts" -ForegroundColor Gray
+Write-Host "  phase 1:  beads + gitnexus initialized" -ForegroundColor Gray
+Write-Host "  phase 2:  superpowers-* pipeline + tool injection" -ForegroundColor Gray
+Write-Host "  on-demand: /autoresearch (if installed)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Start a dev task in Claude Code — devflow auto-triggers." -ForegroundColor Green

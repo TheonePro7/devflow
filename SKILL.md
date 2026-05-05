@@ -51,7 +51,7 @@ Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不�
 
 1. **devflow does not reimplement superpowers phases.** Brainstorming, writing plans, git worktrees, subagent-driven-development, code review, and branch finishing are all delegated to `superpowers-*` skills.
 2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, autoresearch auto-optimization, and **screenshot-to-code frontend generation** are injected at defined points.
-3. **Phase 0 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 0 produces a PRD draft. Phase 0.5 (Design) follows — frontend architecture + UI generation before any backend code.
+3. **Phase 0 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 0 runs a 4-stage adaptive discovery, then invokes to-prd to produce the final PRD. Phase 0.5 (Design) follows — frontend architecture + UI generation before any backend code.
 4. **Phase 0/0.5 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude structures and drives the process. Hard gates (grill, autoresearch) apply from Phase 2 onward.
 5. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
 6. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
@@ -80,24 +80,46 @@ Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不�
 ```
 Phase 0: Ideate (session-level, per-feature)
   ────────────────────────────────────────
-  Goal: Turn a raw idea into a structured product brief.
-  
-  1. User shares raw idea/vision
-  2. Claude guides structured exploration:
-     - What problem are we solving?
-     - Who are the target users?
-     - What existing solutions exist?
-     - How do we measure success?
-  3. Generate product brief:
-     - Product vision statement
-     - User personas (2-3)
-     - Feature hypotheses (MoSCoW: Must/Should/Could/Won't)
-     - Risk & constraint analysis
-  4. Output: PRD draft saved to docs/prd/
-  
-  No external tools needed — everything happens through
-  Claude-guided conversation. Phase 0 ends with a PRD
-  that feeds into Phase 0.5 and Phase 2.
+  Goal: Raw idea → structured PRD via adaptive discovery.
+  Powered by 4-stage exploration engine + to-prd for output.
+
+  ┌──────────────────────────────────────────────┐
+  │  STRUCTURED DISCOVERY ENGINE                 │
+  │                                              │
+  │  Stage 1: Problem Discovery                  │
+  │    ├── Pain point → current state → timing   │
+  │    ├── Competitive landscape                  │
+  │    └── Output: Problem Statement             │
+  │                                              │
+  │  Stage 2: Users & Scenarios                  │
+  │    ├── Persona derivation (2-3 roles)        │
+  │    ├── Scenario mapping                      │
+  │    └── Output: Personas + User Stories       │
+  │                                              │
+  │  Stage 3: Feature Discovery                  │
+  │    ├── Divergent: brainstorm all features    │
+  │    ├── Convergent: MoSCoW priority sort      │
+  │    └── Output: Prioritized feature list      │
+  │                                              │
+  │  Stage 4: Constraints & Success              │
+  │    ├── Technical/business/platform/ timeline │
+  │    ├── Success metrics (qual + quant)        │
+  │    └── Risk assessment                       │
+  │                                              │
+  │  KEY: Adaptive — skip stages user already    │
+  │  covered. Only probe gaps.                   │
+  └──────────────────────┬───────────────────────┘
+                         │ structured context
+                         ▼
+  ┌──────────────────────────────────────────────┐
+  │  to-prd skill                                │
+  │  ├── Writes formatted PRD to GitHub Issues   │
+  │  └── Also saves to docs/prd/<feature>.md     │
+  └──────────────────────────────────────────────┘
+
+  Phase 0 outputs structured JSON to .devflow/prd-context.json,
+  then invokes to-prd for formatting. End result is a production-
+  ready PRD that feeds into Phase 0.5 (Design) and Phase 2.
 
 Phase 0.5: Design (session-level, per-feature)
   ────────────────────────────────────────────

@@ -28,7 +28,7 @@ if (-not $allOk) {
     if (-not $gitnexusInit) { $issues += "gitnexus index not built (run 'gitnexus analyze .')" }
 
     $summary = "devflow Phase 1 pending — $($issues -join '; ')"
-    $systemMsg = "devflow: Phase 1 setup needed. Run setup.ps1 or setup.sh to initialize beads + gitnexus."
+    $systemMsg = "devflow: Phase 1 not initialized. Setup will auto-run now — agent will execute setup.ps1 or setup.sh."
 
     $output = @{
         systemMessage = $systemMsg

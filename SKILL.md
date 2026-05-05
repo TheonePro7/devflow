@@ -12,6 +12,7 @@ description: devflow 3-phase development orchestrator (Setup → Develop → Fin
 3. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
 4. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
 5. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
+6. **Phase 1 setup is AUTOMATIC.** When SessionStart hook reports Phase 1 pending, auto-run setup.ps1 (Windows) or setup.sh (Unix/macOS) before proceeding to Phase 2. Do NOT ask the user to run setup manually — just do it. If setup fails (e.g. missing prerequisites), report the specific failure and stop.
 
 ## Architecture
 
@@ -37,13 +38,14 @@ description: devflow 3-phase development orchestrator (Setup → Develop → Fin
 ## The 3 Phases
 
 ```
-Phase 1: Setup (project-level, one-time)
-  ─────────────────────────────────────────
+Phase 1: Setup (project-level, one-time, AUTOMATIC)
+  ──────────────────────────────────────────────────
   Detect deps → bd init → gitnexus analyze → seed docs/
   → configure guardrails → install autoresearch
 
-  Runs from setup.ps1/setup.sh or auto-detects when
-  .beads/ or .gitnexus/ is missing on session start.
+  Auto-runs setup.ps1 (Windows) or setup.sh (Unix/macOS)
+  when SessionStart hook detects .beads/ or .gitnexus/ missing.
+  No manual intervention needed — the agent runs setup automatically.
 
   Creates:
   - docs/CONTEXT.md    (domain vocabulary template)

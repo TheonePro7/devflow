@@ -116,7 +116,7 @@ bash setup.sh
 | 5 | 创建 `docs/adr/` + README.md（如果不存在） | 已有则跳过 |
 | 6 | 创建 `docs/tdd/` 目录（如果不存在） | 已有则跳过 |
 | 7 | 安装 autoresearch（`npx skills add uditgoenka/autoresearch`） | 失败则警告，可跳过: `DEVFLOW_NO_AUTORESEARCH=1` |
-| 8 | 检查 `.claude/hooks/guardrails-git.ps1` + `.sh` | 缺失则警告，可从 devflow skill 目录复制 |
+| 8 | 检查 `.claude/hooks/guardrails-git.ps1` + `.sh` | 缺失则自动复制 |
 
 ### Phase 1 产物
 
@@ -483,7 +483,7 @@ devflow 注册了 3 个 Claude Code hooks（SessionStart 双平台 + PreToolUse 
 ```
 
 **功能**：每次 Claude Code 会话启动时自动运行，检查 Phase 1 状态：
-- Phase 1 未完成 → 输出警告和设置提示，`systemMessage` 显示 UI 警告，`additionalContext` 触发 devflow skill 加载
+- Phase 1 未完成 → 输出状态信息，agent 自动执行 setup.ps1/setup.sh 完成初始化
 - Phase 1 已完成 → 输出就绪状态，`additionalContext` 持续触发 devflow skill 加载，确保管道始终可用
 
 **关键设计**：hook **始终输出**（无论 Phase 1 状态如何），确保 devflow SKILL.md 在每次会话中自动加载。用户无需手动 `/devflow`。
@@ -643,16 +643,16 @@ cd your-project
 
 | 环节 | 是否自动 | 说明 |
 |------|---------|------|
-| Phase 1 检测 | ✅ 自动 | SessionStart hook 每次会话检查 Phase 1 状态 |
-| Phase 1 安装 | 👆 手动一次 | 运行 `setup.ps1` / `setup.sh`（hook 会提示但无法自动执行） |
+| Phase 1 检测 | ✅ 自动 | SessionStart hook 每次会话检测 Phase 1 状态 |
+| Phase 1 安装 | ✅ **自动** | Hook 检测到未初始化 → agent 自动执行 setup.ps1/setup.sh。无需用户操作 |
 | devflow skill 加载 | ✅ 自动 | Hook 始终输出上下文，SKILL.md 在每次会话自动加载 |
 | Git guardrails | ✅ 自动 | PreToolUse hook 拦截每个危险 git 命令，无需用户操作 |
 | Autoresearch 4 门 | ✅ 自动 | probe → scenario → fix → security 在管道中自动触发 |
 | Phase 2 开发管道 | ✅ 自动 | 用户提出需求后，devflow 自动按 ①→①½→①¾→②→②½→③→review→②¾ 编排 |
 | Phase 3 收尾 | 👆 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
 
-> 用户只需：① 安装完运行一次 setup → ② 每次会话提出开发需求 → ③ 会话结束时确认收尾。
-> 其余全部自动。
+> 用户只需：① 确保前置工具已安装（bd + gitnexus）→ ② 每次会话提出开发需求 → ③ 会话结束时确认收尾。
+> 其余全部自动，包括首次安装。
 
 ### 验证安装
 

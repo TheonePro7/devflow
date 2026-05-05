@@ -31,7 +31,7 @@ if [ "$all_ok" -eq 0 ]; then
   issues="${issues%; }"
 
   summary="devflow Phase 1 pending — ${issues}"
-  system_msg="devflow: Phase 1 setup needed. Run setup.ps1 or setup.sh to initialize beads + gitnexus."
+  system_msg="devflow: Phase 1 not initialized. Setup will auto-run now — agent will execute setup.ps1 or setup.sh."
 
   if command -v jq &>/dev/null; then
     jq -n \

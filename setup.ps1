@@ -49,11 +49,66 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "[FAIL] gitnexus analyze failed — run 'npx gitnexus analyze . --force' manually" -ForegroundColor Red
 }
 
-# ---- Step 4: Summary ----
+# ---- Step 4: Seed docs/CONTEXT.md (if not exists) ----
+Write-Host ""
+Write-Host "--- seeding project docs ---" -ForegroundColor Yellow
+$contextMd = Join-Path $PWD "docs\CONTEXT.md"
+if (-not (Test-Path $contextMd)) {
+    $null = New-Item -ItemType File -Path $contextMd -Force
+    @"
+# Project Context — Ubiquitous Language
+
+## Project
+<!-- TODO: describe what this project does -->
+
+## Domain Glossary
+<!-- TODO: add key terms and definitions -->
+"@ | Set-Content -Path $contextMd
+    Write-Host "[PASS] docs/CONTEXT.md seeded" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] docs/CONTEXT.md already exists" -ForegroundColor Gray
+}
+
+# ---- Step 5: Seed docs/adr/ (if empty) ----
+$adrDir = Join-Path $PWD "docs\adr"
+if (-not (Test-Path $adrDir)) {
+    $null = New-Item -ItemType Directory -Path $adrDir -Force
+    @"
+# Architecture Decision Records
+
+## Index
+
+<!-- Add ADRs here sequentially -->
+"@ | Set-Content -Path (Join-Path $adrDir "README.md")
+    Write-Host "[PASS] docs/adr/ seeded" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] docs/adr/ already exists" -ForegroundColor Gray
+}
+
+# ---- Step 6: Seed docs/tdd/ (if empty) ----
+$tddDir = Join-Path $PWD "docs\tdd"
+if (-not (Test-Path $tddDir)) {
+    $null = New-Item -ItemType Directory -Path $tddDir -Force
+    Write-Host "[PASS] docs/tdd/ directory created" -ForegroundColor Green
+    Write-Host "      (copy reference docs from devflow/docs/tdd/)" -ForegroundColor Gray
+} else {
+    Write-Host "[SKIP] docs/tdd/ already exists" -ForegroundColor Gray
+}
+
+# ---- Step 7: Check git guardrails hook ----
+$guardrailsHook = Join-Path $PWD ".claude\hooks\guardrails-git.ps1"
+if (-not (Test-Path $guardrailsHook)) {
+    Write-Host "[WARN] .claude/hooks/guardrails-git.ps1 not found" -ForegroundColor Yellow
+    Write-Host "       Copy from devflow skill directory to enable git safety." -ForegroundColor Gray
+} else {
+    Write-Host "[PASS] git guardrails hook present" -ForegroundColor Green
+}
+
+# ---- Step 8: Summary ----
 Write-Host ""
 Write-Host "=== devflow ready ===" -ForegroundColor Cyan
-Write-Host "  phase 1:  beads + gitnexus initialized" -ForegroundColor Gray
-Write-Host "  phase 2:  superpowers-* pipeline + tool injection" -ForegroundColor Gray
+Write-Host "  phase 1:  beads + gitnexus + docs seeded + guardrails" -ForegroundColor Gray
+Write-Host "  phase 2:  superpowers-* pipeline + grill + tool injection" -ForegroundColor Gray
 Write-Host "  on-demand: /autoresearch (if installed)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Start a dev task in Claude Code — devflow auto-triggers." -ForegroundColor Green

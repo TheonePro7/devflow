@@ -10,19 +10,39 @@ $ErrorActionPreference = "Stop"
 Write-Host "=== devflow setup (Phase 1) ===" -ForegroundColor Cyan
 Write-Host ""
 
-# ---- Step 1: Check prerequisites ----
+# ---- Step 1: Check & install prerequisites ----
 $missing = @()
 
 if (-not (Get-Command "bd" -ErrorAction SilentlyContinue)) {
-    $missing += "beads (bd) — install: go install github.com/gastownhall/beads/cmd/bd@latest"
+    Write-Host "[INFO] beads (bd) not found — auto-installing..." -ForegroundColor Yellow
+    try {
+        go install github.com/gastownhall/beads/cmd/bd@latest 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
+        # Refresh PATH
+        $env:Path = [Environment]::GetEnvironmentVariable("Path", "User") + ";" + [Environment]::GetEnvironmentVariable("Path", "Machine")
+        if (-not (Get-Command "bd" -ErrorAction SilentlyContinue)) {
+            $missing += "beads (bd) — installed but not in PATH. Add Go bin to PATH or run: go install github.com/gastownhall/beads/cmd/bd@latest"
+        }
+    } catch {
+        $missing += "beads (bd) — install failed: $($_.Exception.Message). Manual: go install github.com/gastownhall/beads/cmd/bd@latest"
+    }
 }
 
 if (-not (Get-Command "gitnexus" -ErrorAction SilentlyContinue)) {
-    $missing += "gitnexus — install: npm install -g gitnexus"
+    Write-Host "[INFO] gitnexus not found — auto-installing..." -ForegroundColor Yellow
+    try {
+        npm install -g gitnexus 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
+        if (-not (Get-Command "gitnexus" -ErrorAction SilentlyContinue)) {
+            $missing += "gitnexus — npm install succeeded but command not found. Try: npx gitnexus"
+        }
+    } catch {
+        $missing += "gitnexus — install failed: $($_.Exception.Message). Manual: npm install -g gitnexus"
+    }
 }
 
 if ($missing.Count -gt 0) {
-    Write-Host "[FAIL] Missing prerequisites:" -ForegroundColor Red
+    Write-Host "[FAIL] Some tools could not be auto-installed:" -ForegroundColor Red
     $missing | ForEach-Object { Write-Host "       $_" }
     exit 1
 }

@@ -612,57 +612,58 @@ devflow/
 
 ### 全新安装
 
+用户只需确保系统有 **Go**、**Node.js ≥ 18**、**Git**。其他全部自动。
+
 ```bash
-# 1. 安装前置全局工具
-npm install -g gitnexus
-go install github.com/gastownhall/beads/cmd/bd@latest
+# 1. 安装 devflow skill
+git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
 
 # 2. 在 Claude Code 中安装 superpowers（在 chat 中输入）
 # /plugin install superpowers@claude-plugins-official
 
-# 3. 安装 devflow skill
-git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
-
-# 4. 进入项目目录，运行 Phase 1 初始化（自动安装 autoresearch）
+# 3. 进入项目目录，启动 Claude Code
 cd your-project
-.\setup.ps1                        # PowerShell
-# bash setup.sh                    # Unix/macOS
-
-# 如需跳过 autoresearch:
-# $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1        # PowerShell
-# export DEVFLOW_NO_AUTORESEARCH=1; bash setup.sh     # Unix/macOS
+claude
 ```
+
+首次启动时：
+1. SessionStart hook 自动检测 Phase 1 状态
+2. 发现未初始化 → 自动安装 beads (bd)、gitnexus
+3. 自动运行 `bd init`、`gitnexus analyze`、创建 docs/
+4. 自动安装 autoresearch
+5. 完成后即可直接提需求开发
+
+> **零手动安装**：beads、gitnexus、autoresearch 均为自动安装。用户不需要手动 `go install` 或 `npm install -g`。
 
 ### 初始化后
 
-1. 编辑 `docs/CONTEXT.md`，填充项目领域术语
-2. 查阅 `docs/adr/`，记录重要架构决策
-3. 开始开发（在 Claude Code 中）—— SessionStart hook 自动检测 Phase 1 状态
+1. （可选）编辑 `docs/CONTEXT.md`，填充项目领域术语
+2. 在 Claude Code 中提出开发需求 —— SessionStart hook 自动检测 Phase 1 状态
 
 ### 安装后自动化程度
 
 | 环节 | 是否自动 | 说明 |
 |------|---------|------|
 | Phase 1 检测 | ✅ 自动 | SessionStart hook 每次会话检测 Phase 1 状态 |
-| Phase 1 安装 | ✅ **自动** | Hook 检测到未初始化 → agent 自动执行 setup.ps1/setup.sh。无需用户操作 |
+| Phase 1 安装 | ✅ **自动** | Hook 检测到未初始化 → agent 自动安装缺失工具（bd、gitnexus）→ 自动运行 setup。无需用户操作 |
 | devflow skill 加载 | ✅ 自动 | Hook 始终输出上下文，SKILL.md 在每次会话自动加载 |
 | Git guardrails | ✅ 自动 | PreToolUse hook 拦截每个危险 git 命令，无需用户操作 |
 | Autoresearch 4 门 | ✅ 自动 | probe → scenario → fix → security 在管道中自动触发 |
 | Phase 2 开发管道 | ✅ 自动 | 用户提出需求后，devflow 自动按 ①→①½→①¾→②→②½→③→review→②¾ 编排 |
 | Phase 3 收尾 | 👆 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
 
-> 用户只需：① 确保前置工具已安装（bd + gitnexus）→ ② 每次会话提出开发需求 → ③ 会话结束时确认收尾。
-> 其余全部自动，包括首次安装。
+> 用户只需：① 确保 Go + Node.js ≥ 18 + Git 已安装 → ② 每次会话提出开发需求 → ③ 会话结束时确认收尾。
+> 其余全部自动——包括首次安装。
 
 ### 验证安装
 
-运行以下命令确认所有组件正常工作：
+启动 Claude Code 后 SessionStart hook 自动检测。如需手动验证：
 
 ```bash
-bd version          # 确认 beads 可用
-gitnexus --version  # 确认 gitnexus 可用
-ls .beads/          # 确认 Phase 1 已完成
-ls .gitnexus/       # 确认 gitnexus 索引已构建
+bd version          # beads 可用
+gitnexus --version  # gitnexus 可用
+ls .beads/          # Phase 1 已完成
+ls .gitnexus/       # gitnexus 索引已构建
 ```
 
 ---
@@ -804,8 +805,8 @@ A: 克隆 devflow skill，在新项目的项目根目录运行 setup.ps1。`.cla
 | 项目 | 角色 | devflow 的使用方式 |
 |------|------|-------------------|
 | [obra/superpowers](https://github.com/obra/superpowers) | **核心管道** | 委托 brainstorming、writing-plans、subagent-dev、code-review、finish-branch |
-| [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 1 初始化，Phase 2 创建/更新 issues，Phase 3 关闭 |
-| [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 构建索引，Phase 2 提供 context/impact 给子 agent |
+| [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 1 自动安装并初始化，Phase 2 创建/更新 issues，Phase 3 关闭 |
+| [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 自动安装并构建索引，Phase 2 提供 context/impact 给子 agent |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git.ps1 + guardrails-git.sh; CONTEXT.md + ADR 模式 |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 2 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
 

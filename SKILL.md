@@ -12,7 +12,7 @@ description: devflow 3-phase development orchestrator (Setup → Develop → Fin
 3. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
 4. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
 5. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
-6. **Phase 1 setup is AUTOMATIC.** When SessionStart hook reports Phase 1 pending, auto-run setup.ps1 (Windows) or setup.sh (Unix/macOS) before proceeding to Phase 2. Do NOT ask the user to run setup manually — just do it. If setup fails (e.g. missing prerequisites), report the specific failure and stop.
+6. **ALL tools are auto-installed.** Never ask the user to install anything. If a tool is missing, install it. See [Auto-Install Rules](#auto-install-rules) below.
 
 ## Architecture
 
@@ -38,14 +38,15 @@ description: devflow 3-phase development orchestrator (Setup → Develop → Fin
 ## The 3 Phases
 
 ```
-Phase 1: Setup (project-level, one-time, AUTOMATIC)
-  ──────────────────────────────────────────────────
-  Detect deps → bd init → gitnexus analyze → seed docs/
+Phase 1: Setup (project-level, one-time, FULLY AUTOMATIC)
+  ────────────────────────────────────────────────────────
+  Auto-detect missing tools → auto-install (go install / npm -g)
+  → bd init → gitnexus analyze → seed docs/
   → configure guardrails → install autoresearch
 
-  Auto-runs setup.ps1 (Windows) or setup.sh (Unix/macOS)
-  when SessionStart hook detects .beads/ or .gitnexus/ missing.
-  No manual intervention needed — the agent runs setup automatically.
+  Triggers when SessionStart hook detects .beads/ or .gitnexus/ missing.
+  Every missing tool is auto-installed by the agent or setup script.
+  No manual intervention needed — zero configuration.
 
   Creates:
   - docs/CONTEXT.md    (domain vocabulary template)
@@ -99,6 +100,41 @@ Phase 3: Finish (project-level, per-session)
   beads close all session issues
   Report session summary
 ```
+	
+## Auto-Install Rules
+
+**Rule: If a tool is missing → install it. Never ask the user.**
+
+When devflow detects Phase 1 is pending, follow this sequence:
+
+### 1. Install CLI Tools (if missing)
+
+Check each tool with `command -v <name>`. If missing, install:
+
+| Tool | Install command | Check with |
+|------|----------------|------------|
+| **beads (bd)** | `go install github.com/gastownhall/beads/cmd/bd@latest` | `command -v bd` |
+| **gitnexus** | `npm install -g gitnexus` | `command -v gitnexus` |
+| **superpowers** | In Claude Code: ask user to type `/plugin install superpowers@claude-plugins-official` once (this is a Claude Code built-in, can't auto-run) | Check if `superpowers-*` skills exist |
+| **autoresearch** | `npx skills add uditgoenka/autoresearch` | `command -v skills` and check if autoresearch skill directory exists |
+
+**Order**: Install beads first, then gitnexus, then run setup script (which handles autoresearch).
+
+### 2. Run Setup Script
+
+After all CLI tools are confirmed `command -v` passes, run the Phase 1 setup:
+
+- **Windows**: Run `.\setup.ps1` from project root
+- **Unix/macOS**: Run `bash setup.sh` from project root
+
+The setup script handles: `bd init`, `gitnexus analyze`, seeding docs, installing autoresearch, and setting up guardrails.
+
+### 3. Handle Failures
+
+- `gitnexus analyze` may SIGSEGV on Windows (Node 22 / tree-sitter bug). This is NON-FATAL — Phase 1 continues in "degraded" mode.
+- If `go install` fails (Go not installed): ask user to install Go first, then retry
+- If `npm install -g` fails: try with `npx gitnexus` as fallback
+- Report all failures clearly and stop — do NOT silently proceed with missing tools
 
 ## Tool Injection Details
 
@@ -310,27 +346,27 @@ skill installed via `npx skills add`.
 
 ## Prerequisites
 
-- **Node.js ≥ 18** + **Git**
-- **beads** — `go install github.com/gastownhall/beads/cmd/bd@latest`
-- **gitnexus** — `npm install -g gitnexus`
-- **superpowers** — `/plugin install superpowers@claude-plugins-official`
-- **autoresearch** — installed by default via `npx skills add uditgoenka/autoresearch`
-- **Python ≥ 3.10 + uv** (only for autoresearch ML mode)
+Users need only these base dependencies (devflow auto-installs everything else):
+
+- **Go** (for beads) — `winget install GoLang.Go 2.0` or https://go.dev/dl/
+- **Node.js ≥ 18** + **npm** (for gitnexus, autoresearch)
+- **Git**
+
+Everything else — beads (bd), gitnexus, superpowers skills, autoresearch — is **auto-installed** by devflow during Phase 1. No manual npm install -g or go install needed.
 
 ## Setup for New Project
 
 ```bash
-# From project root:
+# No manual setup needed. Just open the project in Claude Code.
+# SessionStart hook detects Phase 1 → agent auto-installs everything.
+```
+
+If you want to run setup manually (not recommended):
+```bash
 # PowerShell:
 .\setup.ps1
 # or bash:
 # bash setup.sh
-
-# This runs Phase 1: checks deps, bd init, gitnexus analyze,
-# seeds docs/, installs guardrails, installs autoresearch.
-
-# To skip autoresearch:
-# $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1
 ```
 
 ## Mid-Session New Task Handling

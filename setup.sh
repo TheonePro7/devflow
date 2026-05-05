@@ -11,19 +11,34 @@ NC='\033[0m'
 echo -e "${CYAN}=== devflow setup (Phase 1) ===${NC}"
 echo ""
 
-# ---- Step 1: Check prerequisites ----
+# ---- Step 1: Check & install prerequisites ----
 MISSING=()
 
 if ! command -v bd &>/dev/null; then
-    MISSING+=("beads (bd) — install: go install github.com/gastownhall/beads/cmd/bd@latest")
+    echo -e "${YELLOW}[INFO] beads (bd) not found — auto-installing...${NC}"
+    if go install github.com/gastownhall/beads/cmd/bd@latest 2>/dev/null; then
+        export PATH="$HOME/go/bin:$PATH"
+        if ! command -v bd &>/dev/null; then
+            MISSING+=("beads (bd) — installed but not in PATH. Add \$HOME/go/bin to PATH or run: go install github.com/gastownhall/beads/cmd/bd@latest")
+        fi
+    else
+        MISSING+=("beads (bd) — auto-install failed. Manual: go install github.com/gastownhall/beads/cmd/bd@latest")
+    fi
 fi
 
 if ! command -v gitnexus &>/dev/null; then
-    MISSING+=("gitnexus — install: npm install -g gitnexus")
+    echo -e "${YELLOW}[INFO] gitnexus not found — auto-installing...${NC}"
+    if npm install -g gitnexus 2>/dev/null; then
+        if ! command -v gitnexus &>/dev/null; then
+            MISSING+=("gitnexus — npm install succeeded but command not found. Try: npx gitnexus")
+        fi
+    else
+        MISSING+=("gitnexus — auto-install failed. Manual: npm install -g gitnexus")
+    fi
 fi
 
 if [ ${#MISSING[@]} -gt 0 ]; then
-    echo -e "${RED}[FAIL] Missing prerequisites:${NC}"
+    echo -e "${RED}[FAIL] Some tools could not be auto-installed:${NC}"
     for m in "${MISSING[@]}"; do
         echo "       $m"
     done

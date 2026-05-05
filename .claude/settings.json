@@ -53,6 +53,17 @@
       {
         "hooks": [
           {
+            "command": "bash .claude/hooks/devflow-init-check.sh",
+            "shell": "bash",
+            "statusMessage": "devflow: checking project state...",
+            "timeout": 10,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
             "command": "bd prime",
             "type": "command"
           }

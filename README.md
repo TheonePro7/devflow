@@ -116,7 +116,7 @@ bash setup.sh
 | 5 | 创建 `docs/adr/` + README.md（如果不存在） | 已有则跳过 |
 | 6 | 创建 `docs/tdd/` 目录（如果不存在） | 已有则跳过 |
 | 7 | 安装 autoresearch（`npx skills add uditgoenka/autoresearch`） | 失败则警告，可跳过: `DEVFLOW_NO_AUTORESEARCH=1` |
-| 8 | 检查 `.claude/hooks/guardrails-git.ps1` | 缺失则警告 |
+| 8 | 检查 `.claude/hooks/guardrails-git.ps1` + `.sh` | 缺失则警告，可从 devflow skill 目录复制 |
 
 ### Phase 1 产物
 
@@ -453,6 +453,8 @@ devflow 注册了两个 Claude Code hooks：
 
 ### SessionStart Hook
 
+分别在 PowerShell 和 bash 中注册，覆盖所有平台：
+
 ```json
 {
   "hooks": {
@@ -463,6 +465,15 @@ devflow 注册了两个 Claude Code hooks：
           "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
           "timeout": 10,
           "shell": "powershell",
+          "statusMessage": "devflow: checking project state..."
+        }]
+      },
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/devflow-init-check.sh",
+          "timeout": 10,
+          "shell": "bash",
           "statusMessage": "devflow: checking project state..."
         }]
       }
@@ -542,7 +553,8 @@ devflow/
 │   │   - 个人/机器特定的覆写
 │   │
 │   └── hooks/
-│       ├── devflow-init-check.ps1  # SessionStart: 检测 beads/gitnexus 初始化状态
+│       ├── devflow-init-check.ps1  # SessionStart: 检测 beads/gitnexus 初始化状态 (Windows)
+│       ├── devflow-init-check.sh   # SessionStart: 检测 beads/gitnexus 初始化状态 (Unix/macOS)
 │       ├── guardrails-git.ps1      # PreToolUse: 检测并拦截危险 git 命令 (Windows)
 │       └── guardrails-git.sh       # PreToolUse: 检测并拦截危险 git 命令 (Unix/macOS)
 │

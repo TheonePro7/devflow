@@ -411,6 +411,12 @@ autoresearch:fix — 每个任务完成后的零错误门:
 
 每个 Bash 命令执行前，PreToolUse hook 检查命令内容。匹配危险模式则直接拒绝。
 
+devflow 提供双实现覆盖所有平台：
+- **Windows (PowerShell)**：`guardrails-git.ps1` — 通过 `shell: "powershell"` 注册
+- **Unix/macOS/Git Bash**：`guardrails-git.sh` — 通过 `shell: "bash"` 注册
+
+Claude Code 根据实际运行的 shell 自动选择对应的 hook，无需人工配置。
+
 ### 被拦截的命令
 
 | 命令模式 | 风险 | 安全替代 |
@@ -469,6 +475,8 @@ devflow 注册了两个 Claude Code hooks：
 
 ### PreToolUse Hook (Git Guardrails)
 
+分别在 PowerShell 和 bash 两个 shell 中注册：
+
 ```json
 {
   "hooks": {
@@ -480,6 +488,16 @@ devflow 注册了两个 Claude Code hooks：
           "command": "powershell -NoProfile -File .claude/hooks/guardrails-git.ps1",
           "timeout": 5,
           "shell": "powershell",
+          "statusMessage": "devflow: checking git safety..."
+        }]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "bash .claude/hooks/guardrails-git.sh",
+          "timeout": 5,
+          "shell": "bash",
           "statusMessage": "devflow: checking git safety..."
         }]
       }
@@ -509,6 +527,7 @@ devflow/
 ├── setup.ps1                       # Phase 1 安装脚本（Windows PowerShell）
 ├── setup.sh                        # Phase 1 安装脚本（Unix bash）
 ├── README.md                       # 本文档
+├── CLAUDE.md                       # devflow 项目开发约定（供 AI agent 使用）
 ├── LICENSE                         # MIT License
 ├── .gitignore                      # 排除 node_modules/ + settings.local.json
 │
@@ -524,7 +543,8 @@ devflow/
 │   │
 │   └── hooks/
 │       ├── devflow-init-check.ps1  # SessionStart: 检测 beads/gitnexus 初始化状态
-│       └── guardrails-git.ps1      # PreToolUse: 检测并拦截危险 git 命令
+│       ├── guardrails-git.ps1      # PreToolUse: 检测并拦截危险 git 命令 (Windows)
+│       └── guardrails-git.sh       # PreToolUse: 检测并拦截危险 git 命令 (Unix/macOS)
 │
 ├── scripts/
 │   ├── prd-to-beads.ps1            # 设计文档 → beads issues（Windows）
@@ -533,11 +553,17 @@ devflow/
 │   │                                        -EpicTitle "My Feature"
 │   │                                        [-EpicId bd-xxxx]
 │   │
-│   └── prd-to-beads.sh             # 设计文档 → beads issues（Unix）
-│                                     Usage: bash scripts/prd-to-beads.sh
-│                                              -d docs/specs/design.md
-│                                              -e "My Feature"
-│                                              [-i bd-xxxx]
+│   ├── prd-to-beads.sh             # 设计文档 → beads issues（Unix）
+│   │                                 Usage: bash scripts/prd-to-beads.sh
+│   │                                        -d docs/specs/design.md
+│   │                                        -e "My Feature"
+│   │                                        [-i bd-xxxx]
+│   │
+│   ├── test-guardrails.ps1         # Git guardrails 验证测试（24 用例）
+│   │                                 Run: powershell -File scripts/test-guardrails.ps1
+│   │
+│   └── test-guardrails.sh          # Git guardrails 验证测试（bash 版）
+│                                     Run: bash scripts/test-guardrails.sh
 │
 ├── docs/
 │   ├── CONTEXT.md                  # 领域词汇表（Ubiquitous Language）
@@ -736,7 +762,7 @@ A: 克隆 devflow skill，在新项目的项目根目录运行 setup.ps1。`.cla
 | [obra/superpowers](https://github.com/obra/superpowers) | **核心管道** | 委托 brainstorming、writing-plans、subagent-dev、code-review、finish-branch |
 | [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 1 初始化，Phase 2 创建/更新 issues，Phase 3 关闭 |
 | [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 构建索引，Phase 2 提供 context/impact 给子 agent |
-| [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git; CONTEXT.md + ADR 模式 |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git.ps1 + guardrails-git.sh; CONTEXT.md + ADR 模式 |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 2 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
 
 ### devflow 不做什么

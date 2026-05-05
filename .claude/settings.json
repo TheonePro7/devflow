@@ -1,31 +1,51 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
-    "SessionStart": [
+    "PreCompact": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
-            "timeout": 10,
-            "shell": "powershell",
-            "statusMessage": "devflow: checking project state..."
+            "command": "bd prime",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": ""
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
             "command": "powershell -NoProfile -File .claude/hooks/guardrails-git.ps1",
-            "timeout": 5,
             "shell": "powershell",
-            "statusMessage": "devflow: checking git safety..."
+            "statusMessage": "devflow: checking git safety...",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
+            "shell": "powershell",
+            "statusMessage": "devflow: checking project state...",
+            "timeout": 10,
+            "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ]
   },

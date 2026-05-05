@@ -12,7 +12,8 @@
 
 param(
     [switch]$Fresh,
-    [switch]$SkipAutoresearch
+    [switch]$SkipAutoresearch,
+    [switch]$WithDesigner
 )
 
 $ErrorActionPreference = "Stop"
@@ -314,6 +315,13 @@ if ($SkipAutoresearch -or $env:DEVFLOW_NO_AUTORESEARCH -eq "1") {
         Write-Host "[WARN] npx skills not available - install autoresearch manually:" -ForegroundColor Yellow
         Write-Host "       npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
     }
+}
+
+# ---- Optional: Auto-Designer generators ----
+if ($WithDesigner) {
+    Write-Host ""
+    Write-Host "--- auto-designer generators ---" -ForegroundColor Yellow
+    & ".\scripts\auto-designer.ps1" -Install openui 2>&1
 }
 
 # ---- Step 9: Superpowers check ----

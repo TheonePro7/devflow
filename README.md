@@ -2,6 +2,8 @@
 
 **Claude Code 开发工作流编排器 — 3 阶段（Setup → Develop → Finish）增强 superpowers 管道 + 4 个自动 autoresearch 优化门**
 
+[English](README.en.md)
+
 devflow 是一个轻量级 orchestrator skill，包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自动优化**（4 个自动门：probe → scenario → fix → security）、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**六大工具。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
 
 ---
@@ -608,31 +610,24 @@ devflow/
 │   └── test-merge.sh               # Merge 脚本验证测试（bash 版）
 │                                     Run: bash scripts/test-merge.sh
 │
-├── docs/
-│
-├── docs/
-│   ├── CONTEXT.md                  # 领域词汇表（Ubiquitous Language）
-│   │   - 项目业务术语定义
-│   │   - 外部系统引用
-│   │   - 编码约定
-│   │   - 由 grill 环节和子 agent 使用
-│   │
-│   ├── adr/
-│   │   ├── README.md               # ADR 索引和管理说明
-│   │   └── 0001-use-devflow-3-phase-orchestration.md
-│   │                                 # 第一条架构决策：采用 devflow 3 阶段编排
-│   │
-│   └── tdd/
-│       ├── deep-modules.md          # 深层模块设计：隐藏复杂度
-│       ├── interface-design.md      # 接口设计：先写调用方
-│       ├── mocking.md               # Mock 原则：仅系统边界
-│       ├── refactoring.md           # 重构模式：一次一步
-│       └── tests.md                 # 测试哲学：测试行为而非实现
-│
-└── docs/superpowers/
-    └── specs/                       # superpowers 设计文档存档
-        ├── <design-name>.md         # brainstorming 产出的设计文档
-        └── <design-name>-grill-report.md  # grill 环节产出的拷问报告
+└── docs/
+    ├── CONTEXT.md                  # 领域词汇表（Ubiquitous Language）
+    │   - 项目业务术语定义
+    │   - 外部系统引用
+    │   - 编码约定
+    │   - 由 grill 环节和子 agent 使用
+    │
+    ├── adr/
+    │   ├── README.md               # ADR 索引和管理说明
+    │   └── 0001-use-devflow-3-phase-orchestration.md
+    │                                 # 第一条架构决策：采用 devflow 3 阶段编排
+    │
+    └── tdd/
+        ├── deep-modules.md          # 深层模块设计：隐藏复杂度
+        ├── interface-design.md      # 接口设计：先写调用方
+        ├── mocking.md               # Mock 原则：仅系统边界
+        ├── refactoring.md           # 重构模式：一次一步
+        └── tests.md                 # 测试哲学：测试行为而非实现
 ```
 
 ---

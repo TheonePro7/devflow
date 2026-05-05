@@ -340,6 +340,10 @@ screenshot-to-code is Python-based and requires a separate terminal/server proce
 
 ### ⓪ — Phase 0 Ideate Injection
 
+**Golden rule: Listen first — do NOT jump to solutions.**
+Your job is to explore the problem, not design the product.
+Let the user finish sharing their idea before asking questions.
+
 When user shares a raw idea, run the 4-stage adaptive discovery engine.
 Each stage auto-detects if the user has already covered that dimension.
 Only probe gaps. Never ask mechanical questions.

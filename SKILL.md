@@ -331,7 +331,35 @@ skill installed via `npx skills add`.
 # $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1
 ```
 
-## Rules
+## Mid-Session New Task Handling
+
+When the user proposes a new task mid-pipeline (e.g., during implementation ③), the pipeline is **not** linear-only. Handle based on scope:
+
+### Classification
+
+| If the request is... | Then... |
+|----------------------|---------|
+| A small tweak within current scope (rename, minor UI adjust, error message) | Handle inline via current subagent — no re-entry |
+| A logical sub-task missed during writing-plans (e.g., "also need a validation layer") | Create a beads sub-task, run autoresearch:fix gate on it. Do NOT restart pipeline |
+| A genuinely new feature unrelated to current work | Record as beads issue, defer to next session. Do NOT interrupt current pipeline |
+| An expansion that changes current design assumptions ("actually the format should be completely different") | **Pause implementation.** Re-enter pipeline at ① brainstorming with the new constraint. Grill + probe again |
+
+### Recovery Flow (Design Expansion Only)
+
+```
+③ implementation in progress
+    │
+    ── user: "change direction" ──→ ① brainstorming (revised)
+                                       │
+                                       ├── ①½ grill (re-check)
+                                       ├── ①¾ probe (re-check)
+                                       ├── ② plans (revised)
+                                       ├── ②½ scenario (re-generated)
+                                       └── ③ implementation (continue)
+                                              └── autoresearch:fix (re-run)
+```
+
+**Key rule**: Do NOT silently restart the pipeline without telling the user. State the plan and confirm before abandoning in-progress work.
 
 - Build verification is **mandatory** before commit
 - Code is not done until `git push` succeeds

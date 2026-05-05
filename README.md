@@ -303,6 +303,27 @@ context:
 
 **跳过方式**：告诉 agent "skip probe" 或设置 `DEVFLOW_NO_AUTORESEARCH=1`。
 
+### ② — Writing Plans 注入
+
+**时机**：计划分解为任务后，每个任务开始前。
+
+```yaml
+beads:
+  - bd create --title="<task>" --parent=<epic_id> --type=task
+  - bd dep add <task_id> <dependency_id>
+  - 任务 ID 层级化: bd-xxx.1, bd-xxx.1.1, ...
+
+gitnexus:
+  - gitnexus impact <symbol> --depth 2
+  - 分析变更的"爆炸半径"（影响范围），注入计划上下文
+
+auto-split (PRD→beads):
+  - 如果设计文档包含 "## Task:" 标题，自动运行:
+    scripts/prd-to-beads.ps1 -d ./docs/superpowers/specs/<design>.md -e "<title>" -i <epic_id>
+  - 或 bash: bash scripts/prd-to-beads.sh -d ... -e ... -i ...
+  - 每个 task 创建为一个 beads issue，自动设置 Depends on 关系
+```
+
 ### ②½ — Autoresearch Scenario 注入 ★ 自动
 
 **时机**：writing-plans 分解任务后、implementation 前。默认自动执行。
@@ -326,27 +347,6 @@ context:
 ```
 
 **跳过方式**：告诉 agent "skip scenario"。
-
-### ② — Writing Plans 注入
-
-**时机**：计划分解为任务后，每个任务开始前。
-
-```yaml
-beads:
-  - bd create --title="<task>" --parent=<epic_id> --type=task
-  - bd dep add <task_id> <dependency_id>
-  - 任务 ID 层级化: bd-xxx.1, bd-xxx.1.1, ...
-
-gitnexus:
-  - gitnexus impact <symbol> --depth 2
-  - 分析变更的"爆炸半径"（影响范围），注入计划上下文
-
-auto-split (PRD→beads):
-  - 如果设计文档包含 "## Task:" 标题，自动运行:
-    scripts/prd-to-beads.ps1 -d ./docs/superpowers/specs/<design>.md -e "<title>" -i <epic_id>
-  - 或 bash: bash scripts/prd-to-beads.sh -d ... -e ... -i ...
-  - 每个 task 创建为一个 beads issue，自动设置 Depends on 关系
-```
 
 ### ③ — Implementation 注入
 
@@ -613,42 +613,27 @@ devflow/
 npm install -g gitnexus
 go install github.com/gastownhall/beads/cmd/bd@latest
 
-# 2. 在 Claude Code 中安装 superpowers
-#    在 chat 中输入:
-/plugin install superpowers@claude-plugins-official
+# 2. 在 Claude Code 中安装 superpowers（在 chat 中输入）
+# /plugin install superpowers@claude-plugins-official
 
 # 3. 安装 devflow skill
 git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
 
-# 4. 进入项目目录，运行 Phase 1 初始化
-#    (会自动安装 autoresearch)
+# 4. 进入项目目录，运行 Phase 1 初始化（自动安装 autoresearch）
 cd your-project
-# PowerShell:
-.\setup.ps1
-# 或 bash:
-# bash setup.sh
+.\setup.ps1                        # PowerShell
+# bash setup.sh                    # Unix/macOS
 
-# 如需跳过 autoresearch 安装:
-# $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1   (PowerShell)
-# export DEVFLOW_NO_AUTORESEARCH=1; bash setup.sh (bash)
+# 如需跳过 autoresearch:
+# $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1        # PowerShell
+# export DEVFLOW_NO_AUTORESEARCH=1; bash setup.sh     # Unix/macOS
 ```
 
-# 5. 进入你的项目目录
-cd your-project
+### 初始化后
 
-# 6. 运行 Phase 1 初始化
-# PowerShell:
-.\setup.ps1
-# 或 bash:
-# bash setup.sh
-
-# 7. 编辑 docs/CONTEXT.md，填充项目领域术语
-#    编辑 docs/adr/，记录重要架构决策
-
-# 8. 开始开发（在 Claude Code 中）
-#    SessionStart hook 会检测 Phase 1 状态，
-#    一切就绪后即可进入 Phase 2 开发循环
-```
+1. 编辑 `docs/CONTEXT.md`，填充项目领域术语
+2. 查阅 `docs/adr/`，记录重要架构决策
+3. 开始开发（在 Claude Code 中）—— SessionStart hook 自动检测 Phase 1 状态
 
 ### 验证安装
 
@@ -730,6 +715,34 @@ Depends on: bd-x9k2.1
 ```bash
 .\scripts\prd-to-beads.ps1 -DesignDoc .\docs\superpowers\specs\auth-design.md -EpicTitle "用户认证系统"
 ```
+
+### 场景 5：开发中提出新需求
+
+当实现进行到一半时提出新需求，按范围分级处理：
+
+| 场景 | 处理方式 |
+|------|----------|
+| 小调整（改名、改文案） | 当前子 agent 直接处理，不中断流程 |
+| 遗漏的子任务（"还需要加个校验"） | 创建 beads sub-task，走 autoresearch:fix 门 |
+| 全新的功能（与当前无关） | 创建 beads issue，推迟到下个会话 |
+| 方向变更（"格式要全改"） | **暂停实现**，重新进入管道 ① brainstorming → grill → probe → plans → scenario → ③ 继续 |
+
+**方向变更恢复流程**：
+
+```
+③ implementation 中
+    │
+    ── "换个方案" ──→ ① brainstorming (修订设计)
+                       ├── ①½ grill (重新拷问)
+                       ├── ①¾ probe (重新检查)
+                       ├── ② plans (重新拆分任务)
+                       ├── ②½ scenario (重新生成用例)
+                       └── ③ implementation (继续)
+                              └── autoresearch:fix (重新运行)
+```
+
+> 注意：子 agent 不得在未告知用户的情况下静默重启管道。必须先说明计划并确认。  
+> 小调整与方向变更的界限由 agent 判断——不确定时主动向用户确认。
 
 ---
 

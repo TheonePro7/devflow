@@ -72,7 +72,7 @@ Write-Host ""
 Write-Host "--- beads init ---" -ForegroundColor Yellow
 if (Test-Path ".beads") {
     Write-Host "[SKIP] .beads/ already exists - running bd doctor to verify..." -ForegroundColor Yellow
-    bd doctor 2>&1 | Out-Null
+    $oldEAP = $ErrorActionPreference; $ErrorActionPreference = "Continue"; bd doctor 2>&1 | Out-Null; $ErrorActionPreference = $oldEAP
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[PASS] beads OK (bd doctor passed)" -ForegroundColor Green
     } else {
@@ -110,12 +110,12 @@ if (-not $ignoreGitnexus) {
 Write-Host ""
 Write-Host "--- settings.json ---" -ForegroundColor Yellow
 if ($mergeMode -and (Test-Path ".claude/settings.json")) {
-    & ".\scripts\merge-settings.ps1"
+    & "$PSScriptRoot\scripts\merge-settings.ps1"
 } elseif ($mergeMode) {
-    & ".\scripts\merge-settings.ps1"
+    & "$PSScriptRoot\scripts\merge-settings.ps1"
 } else {
     # Fresh mode - just write defaults
-    & ".\scripts\merge-settings.ps1"
+    & "$PSScriptRoot\scripts\merge-settings.ps1"
 }
 Write-Host "[PASS] settings.json configured" -ForegroundColor Green
 
@@ -140,7 +140,7 @@ if (-not (Test-Path $guardrailsPs1) -or -not $mergeMode) {
 } else {
     # Existing guardrails found - merge patterns
     if (Test-Path ".\scripts\merge-guardrails.ps1") {
-        & ".\scripts\merge-guardrails.ps1"
+        & "$PSScriptRoot\scripts\merge-guardrails.ps1"
     } else {
         Write-Host "[SKIP] merge-guardrails.ps1 not found" -ForegroundColor Yellow
     }
@@ -190,7 +190,7 @@ $contextMd = "docs/CONTEXT.md"
 if (Test-Path $contextMd) {
     if ($mergeMode) {
         if (Test-Path ".\scripts\merge-docs.ps1") {
-            & ".\scripts\merge-docs.ps1"
+            & "$PSScriptRoot\scripts\merge-docs.ps1"
         } else {
             Write-Host "[SKIP] merge-docs.ps1 not found" -ForegroundColor Yellow
         }
@@ -288,7 +288,7 @@ if (Test-Path $tddDir) {
 Write-Host ""
 Write-Host "--- .gitignore ---" -ForegroundColor Yellow
 if (Test-Path ".\scripts\merge-gitignore.ps1") {
-    & ".\scripts\merge-gitignore.ps1"
+    & "$PSScriptRoot\scripts\merge-gitignore.ps1"
 } else {
     Write-Host "[SKIP] merge-gitignore.ps1 not found" -ForegroundColor Yellow
 }
@@ -323,7 +323,7 @@ if ($WithDesigner) {
     Write-Host ""
     Write-Host "--- auto-designer generators ---" -ForegroundColor Yellow
     Write-Host "  Installing optional UI generation tools..." -ForegroundColor Gray
-    & ".\scripts\auto-designer.ps1" -Install openui 2>&1
+    & "$PSScriptRoot\scripts\auto-designer.ps1" -Install openui 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  [SKIP] OpenUI install skipped (install manually: pip install openui)" -ForegroundColor Yellow
     }
@@ -334,7 +334,7 @@ if ($WithDesigner) {
 Write-Host ""
 Write-Host "--- superpowers check ---" -ForegroundColor Yellow
 if (Test-Path ".\scripts\check-superpowers.ps1") {
-    & ".\scripts\check-superpowers.ps1"
+    & "$PSScriptRoot\scripts\check-superpowers.ps1"
 } else {
     Write-Host "[SKIP] check-superpowers.ps1 not found" -ForegroundColor Yellow
 }

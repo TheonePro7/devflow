@@ -1,7 +1,5 @@
 # Project Instructions for AI Agents
 
-This file provides instructions and context for AI coding agents working on this project.
-
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
@@ -49,21 +47,67 @@ bd close <id>         # Complete work
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
+## devflow — Project Conventions
 
-## Build & Test
+### 3-Phase Architecture
 
-_Add your build and test commands here_
+devflow is itself built on the same 3-phase architecture it orchestrates:
+- **Phase 1** (Setup): `setup.ps1` / `setup.sh` — one-time project initialization
+- **Phase 2** (Develop): `SKILL.md` defines the pipeline with superpowers + autoresearch gates
+- **Phase 3** (Finish): beads close + git push
+
+### Key Files
+
+- `SKILL.md` — Core orchestrator definition (the source of truth for pipeline behavior)
+- `setup.ps1` / `setup.sh` — Phase 1 setup scripts (must be kept in sync)
+- `.claude/settings.json` — Project hooks (SessionStart, PreToolUse, PreCompact)
+- `.claude/hooks/` — Hook scripts (devflow-init-check, guardrails-git)
+- `scripts/prd-to-beads.ps1` / `.sh` — PRD task auto-split
+- `docs/` — Project documentation (CONTEXT.md, ADRs, TDD docs, specs)
+
+### Guardrails
+
+- Git guardrails block 12 dangerous patterns (force push, hard reset, branch -D, etc.)
+- Two implementations: `guardrails-git.ps1` (PowerShell) and `guardrails-git.sh` (bash)
+- Both must be kept in sync when adding/removing patterns
+- Registered in `.claude/settings.json` under `hooks.PreToolUse` with matcher "Bash"
+
+### autoresearch Integration
+
+- 4 automatic gates: probe (①¾) → scenario (②½) → fix-per-task (③) → security (②¾)
+- ON by default, opt-out via `DEVFLOW_NO_AUTORESEARCH=1` env var
+- Individual gates can be skipped: "skip probe", "skip scenario", "skip fix gate", "skip security audit"
+- Installed via `npx skills add uditgoenka/autoresearch` during Phase 1 setup
+
+### GitNexus Limitation (Windows)
+
+- `gitnexus analyze` segfaults (SIGSEGV, exit 139) on Windows with Node 22 due to upstream tree-sitter bug
+- This is non-fatal — Phase 1 continues in "degraded" mode
+- All `--flag` workarounds tested and confirmed ineffective
+
+### Cross-Platform Parity
+
+- `setup.ps1` and `setup.sh` must implement the same 9 steps
+- `guardrails-git.ps1` and `guardrails-git.sh` must block the same 12 patterns
+- `prd-to-beads.ps1` and `prd-to-beads.sh` must parse the same markdown format
+- When modifying any paired file, update both
+
+### Build & Test
 
 ```bash
-# Example:
-# npm install
-# npm test
+# Validate hook JSON output:
+echo '{"tool_name":"Bash","tool_input":{"command":"git push --force"}}' | powershell -NoProfile -File .claude/hooks/guardrails-git.ps1
+echo '{"tool_name":"Bash","tool_input":{"command":"git push --force"}}' | bash .claude/hooks/guardrails-git.sh
+
+# Validate settings JSON:
+jq . .claude/settings.json
+
+# Verify no auto-generated CR/LF in bash scripts:
+file .claude/hooks/guardrails-git.sh | findstr "CRLF" && echo "WARNING: CRLF in bash script"
 ```
 
-## Architecture Overview
+### Commit Style
 
-_Add a brief overview of your project architecture_
-
-## Conventions & Patterns
-
-_Add your project-specific conventions here_
+- Use imperative mood ("Add", "Fix", "Refactor", "Update")
+- Prefix scope when relevant: `hooks:`, `setup:`, `SKILL:`, `docs:`, `scripts:`
+- One commit per logical change

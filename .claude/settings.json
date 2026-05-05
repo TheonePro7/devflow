@@ -24,6 +24,18 @@
           }
         ],
         "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash .claude/hooks/guardrails-git.sh",
+            "shell": "bash",
+            "statusMessage": "devflow: checking git safety...",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
     "SessionStart": [

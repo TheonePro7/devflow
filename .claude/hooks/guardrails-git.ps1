@@ -20,18 +20,18 @@ if (-not $command) { return }
 
 # Dangerous git patterns — block these outright
 $dangerous = @(
-    'git push --force',
-    'git push -f',
-    'git reset --hard',
-    'git clean -fd',
-    'git clean -df',
-    'git branch -D',
+    'git push --force(?![-\w])',
+    'git push -f(?![-\w])',
+    'git reset --hard(?![-\w])',
+    'git clean -fd(?![-\w])',
+    'git clean -df(?![-\w])',
+    'git branch -D(?![-\w])',
     'git checkout \.',
     'git checkout --',
     'git restore \.',
     'git restore --staged \.',
-    'git rebase --skip',
-    'git merge --abort'
+    'git rebase --skip(?![-\w])',
+    'git merge --abort(?![-\w])'
 )
 
 foreach ($pattern in $dangerous) {

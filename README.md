@@ -1,8 +1,8 @@
 # devflow
 
-**Claude Code 开发工作流编排器 — 3 阶段（Setup → Develop → Finish）增强 superpowers 管道**
+**Claude Code 开发工作流编排器 — 3 阶段（Setup → Develop → Finish）增强 superpowers 管道 + 4 个自动 autoresearch 优化门**
 
-devflow 是一个轻量级 orchestrator skill，包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自治循环**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**六大工具。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
+devflow 是一个轻量级 orchestrator skill，包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自动优化**（4 个自动门：probe → scenario → fix → security）、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**六大工具。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
 
 ---
 
@@ -34,17 +34,16 @@ devflow 采用 3 阶段架构，每个阶段有明确的职责边界：
             ▼               ▼               ▼
         Phase 1         Phase 2         Phase 3
         Setup           Develop         Finish
-            │               │               │
-            │          ┌────┴────┐          │
-            ▼          ▼         ▼          ▼
-   ┌────────────────┐ ┌──────────────────┐ ┌──────────┐
-   │ beads init     │ │ plan-grill ①½   │ │  beads   │
-   │ gitnexus analyze│ │ superpowers pipe│ │  close   │
-   │ CONTEXT.md seed │ │ PRD→beads      │ │  report  │
-   │ ADR directory   │ │ TDD deep docs  │ └──────────┘
-   │ guardrails hook │ │ autoresearch   │
-   └────────────────┘ └──────────────────┘
-        session-start       per-task            per-session
+                            │
+                    ┌───────┴───────┐
+                    │               │
+               superpowers      autoresearch
+               pipeline         auto-injected
+                                    │
+                           ┌────────┴────────┐
+                           │    │       │    │
+                          probe scenario fix security
+                           ①¾    ②½   ③   ②¾
 ```
 
 ### 设计原则
@@ -116,7 +115,8 @@ bash setup.sh
 | 4 | 创建 `docs/CONTEXT.md`（如果不存在） | 已有则跳过 |
 | 5 | 创建 `docs/adr/` + README.md（如果不存在） | 已有则跳过 |
 | 6 | 创建 `docs/tdd/` 目录（如果不存在） | 已有则跳过 |
-| 7 | 检查 `.claude/hooks/guardrails-git.ps1` | 缺失则警告 |
+| 7 | 安装 autoresearch（`npx skills add uditgoenka/autoresearch`） | 失败则警告，可跳过: `DEVFLOW_NO_AUTORESEARCH=1` |
+| 8 | 检查 `.claude/hooks/guardrails-git.ps1` | 缺失则警告 |
 
 ### Phase 1 产物
 
@@ -148,10 +148,19 @@ docs/tdd/             # TDD 深度参考文档目录
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ ①½ PLAN-GRILL (HITL 关卡) ★ 新增                │
+│ ①½ PLAN-GRILL (HITL 关卡)                       │
 │   用 CONTEXT.md + ADR + gitnexus 拷问计划       │
 │   发现盲点 → 更新 CONTEXT.md → 确认通过        │
 │   不通过则返回 brainstorming                    │
+├─────────────────────────────────────────────────┤
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ ①¾ AUTORESEARCH PROBE ★ 自动                    │
+│   /autoresearch:probe                           │
+│   8 个对抗人格发现隐藏约束和矛盾                │
+│   输出约束报告 → 补充到 plans                   │
+│   跳过: DEVFLOW_NO_AUTORESEARCH=1               │
 ├─────────────────────────────────────────────────┤
     │
     ▼
@@ -163,9 +172,22 @@ docs/tdd/             # TDD 深度参考文档目录
     │
     ▼
 ┌─────────────────────────────────────────────────┐
+│ ②½ AUTORESEARCH SCENARIO ★ 自动                 │
+│   /autoresearch:scenario                        │
+│   为每个任务生成边界案例和错误状态              │
+│   输出测试场景 → 补充 task 描述                 │
+├─────────────────────────────────────────────────┤
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
 │ ③ superpowers-subagent-driven-development       │
 │   devflow 注入: gitnexus context + beads ready  │
 │   + TDD deep docs                               │
+│   ┌─ 每个任务完成后 ──────────────────────┐     │
+│   │ ★ AUTORESEARCH:FIX 零错误门           │     │
+│   │ /autoresearch:fix --target "npm test" │     │
+│   │ 通过后才 claim 下一个任务              │     │
+│   └────────────────────────────────────────┘     │
 ├─────────────────────────────────────────────────┤
     │
     ▼
@@ -176,11 +198,18 @@ docs/tdd/             # TDD 深度参考文档目录
     │
     ▼
 ┌─────────────────────────────────────────────────┐
+│ ②¾ AUTORESEARCH SECURITY ★ 自动                 │
+│   /autoresearch:security --diff                 │
+│   STRIDE + OWASP Top10 + 红队审计              │
+│   Critical/High 必须修复才能 finish             │
+├─────────────────────────────────────────────────┤
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
 │ superpowers-finishing-a-development-branch      │
 │ (devflow 不参与)                                │
 └─────────────────────────────────────────────────┘
 
-随时可调用: /autoresearch:debug|fix|ship|security|plan
 后台运行: Git guardrails PreToolUse hook
 ```
 
@@ -249,6 +278,55 @@ context:
 
 参见[第三节 Grill 关卡详解](#grill-关卡详解)。
 
+### ①¾ — Autoresearch Probe 注入 ★ 自动
+
+**时机**：grill 通过后、writing-plans 前。默认自动执行。
+
+> 调用 `/autoresearch:probe`，8 个对抗人格（架构师、安全分析师、
+> 性能工程师、可靠性工程师、魔鬼代言人等）独立分析设计后辩论达成共识。
+
+```yaml
+触发: 自动（DEVFLOW_NO_AUTORESEARCH 未设置时）
+命令: /autoresearch:probe --chain plan,autoresearch
+      Topic: "<feature-title>"
+
+输出: probe/{date}-{slug}/
+  - spec.md              — 细化后的需求规约
+  - constraints.tsv      — 发现的约束条件
+  - contradictions.md    — 需求中的矛盾点
+  - assumptions.md       — 被挑战的假设
+  - handoff.json         — 传给 writing-plans 的结构化数据
+
+目的: 人工 grill 找明显盲点，autoresearch:probe 找深层隐藏约束。
+      两者互补，确保 plans 基于完整的需求理解。
+```
+
+**跳过方式**：告诉 agent "skip probe" 或设置 `DEVFLOW_NO_AUTORESEARCH=1`。
+
+### ②½ — Autoresearch Scenario 注入 ★ 自动
+
+**时机**：writing-plans 分解任务后、implementation 前。默认自动执行。
+
+> 调用 `/autoresearch:scenario`，沿 12 个维度生成边界案例。
+
+```yaml
+触发: 自动
+命令: /autoresearch:scenario
+      Scenario: "<task-title>"
+      Iterations: 15
+      Focus: edge-cases
+
+输出: scenario/{date}-{slug}/
+  - 每个任务的边界条件、错误状态、异常流
+  - 附加到 beads task 描述中，子 agent 实现时直接使用
+
+维度: happy path, error, edge case, abuse, scale, concurrency,
+      temporal, data variation, permissions, integration, recovery,
+      state transition
+```
+
+**跳过方式**：告诉 agent "skip scenario"。
+
 ### ② — Writing Plans 注入
 
 **时机**：计划分解为任务后，每个任务开始前。
@@ -290,7 +368,38 @@ tdd-deep-docs:
     - mocking.md          — 仅在系统边界使用 mock
     - refactoring.md      — 一次只做一步重构
     - tests.md            — 测试行为而非实现
+
+autoresearch:fix — 每个任务完成后的零错误门:
+  - 每个任务完成后，claim 下一个任务前自动运行:
+    /autoresearch:fix --target "npm run build && npm test"
+  - :fix 会迭代修复直到错误数为零
+  - 通过后才允许 claim 下一个任务
+  - 跳过方式: 告诉 agent "skip fix gate"
 ```
+
+### ②¾ — Autoresearch Security 注入 ★ 自动
+
+**时机**：code-review 完成后、finish-branch 前。默认自动执行。
+
+> 调用 `/autoresearch:security --diff`，只审计本次变更的文件。
+
+```yaml
+触发: 自动（不是 git add/commit/push 前的 hook，而是
+      Claude Code 会话中 finish-branch 前的 agent 步骤）
+命令: /autoresearch:security --diff
+      Iterations: 10
+
+输出: security/{date}-{slug}/
+  - 资产清单与信任边界图
+  - STRIDE 威胁模型
+  - OWASP Top 10 发现（按严重程度排序）
+  - 4 个人格的攻击路径分析
+  - 严重/高危发现必须修复后才能 finish
+
+目的: 最后一道防线。自动化安全审计，不依赖人工安全审查。
+```
+
+**跳过方式**：告诉 agent "skip security audit" 或设置 `DEVFLOW_NO_AUTORESEARCH=1`。
 
 ---
 
@@ -470,11 +579,21 @@ go install github.com/gastownhall/beads/cmd/bd@latest
 #    在 chat 中输入:
 /plugin install superpowers@claude-plugins-official
 
-# 3. 安装 autoresearch（可选）
-npx skills add uditgoenka/autoresearch
-
-# 4. 安装 devflow skill
+# 3. 安装 devflow skill
 git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
+
+# 4. 进入项目目录，运行 Phase 1 初始化
+#    (会自动安装 autoresearch)
+cd your-project
+# PowerShell:
+.\setup.ps1
+# 或 bash:
+# bash setup.sh
+
+# 如需跳过 autoresearch 安装:
+# $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1   (PowerShell)
+# export DEVFLOW_NO_AUTORESEARCH=1; bash setup.sh (bash)
+```
 
 # 5. 进入你的项目目录
 cd your-project
@@ -618,7 +737,7 @@ A: 克隆 devflow skill，在新项目的项目根目录运行 setup.ps1。`.cla
 | [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 1 初始化，Phase 2 创建/更新 issues，Phase 3 关闭 |
 | [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 构建索引，Phase 2 提供 context/impact 给子 agent |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git; CONTEXT.md + ADR 模式 |
-| [autoresearch](https://github.com/uditgoenka/autoresearch) | **自治循环** | 注册为按需命令，用户通过 `/autoresearch:debug|fix|ship|security|plan` 调用 |
+| [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 2 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
 
 ### devflow 不做什么
 

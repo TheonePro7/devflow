@@ -107,7 +107,36 @@ if (-not (Test-Path $tddDir)) {
     Write-Host "[SKIP] docs/tdd/ already exists" -ForegroundColor Gray
 }
 
-# ---- Step 7: Check git guardrails hook ----
+# ---- Step 7: Install autoresearch (unless opted out) ----
+$installAutoresearch = $true
+if ($env:DEVFLOW_NO_AUTORESEARCH -eq "1") {
+    $installAutoresearch = $false
+    Write-Host ""
+    Write-Host "--- autoresearch ---" -ForegroundColor Yellow
+    Write-Host "[SKIP] DEVFLOW_NO_AUTORESEARCH is set — skipping" -ForegroundColor Gray
+}
+
+if ($installAutoresearch) {
+    Write-Host ""
+    Write-Host "--- autoresearch install ---" -ForegroundColor Yellow
+    $arCheck = Get-Command "skills" -ErrorAction SilentlyContinue
+    if ($arCheck) {
+        npx skills add uditgoenka/autoresearch 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[PASS] autoresearch installed" -ForegroundColor Green
+            Write-Host "       Auto-optimization at probe/scenario/fix/security gates." -ForegroundColor Gray
+            Write-Host "       Disable: `$env:DEVFLOW_NO_AUTORESEARCH=1" -ForegroundColor Gray
+        } else {
+            Write-Host "[WARN] autoresearch install failed" -ForegroundColor Yellow
+            Write-Host "       Run manually: npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "[WARN] npx skills not available — install autoresearch manually:" -ForegroundColor Yellow
+        Write-Host "       npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
+    }
+}
+
+# ---- Step 8: Check git guardrails hook ----
 $guardrailsHook = Join-Path $PWD ".claude\hooks\guardrails-git.ps1"
 if (-not (Test-Path $guardrailsHook)) {
     Write-Host "[WARN] .claude/hooks/guardrails-git.ps1 not found" -ForegroundColor Yellow
@@ -116,16 +145,17 @@ if (-not (Test-Path $guardrailsHook)) {
     Write-Host "[PASS] git guardrails hook present" -ForegroundColor Green
 }
 
-# ---- Step 8: Summary ----
+# ---- Step 9: Summary ----
 Write-Host ""
 Write-Host "=== devflow ready ===" -ForegroundColor Cyan
 if ($gitnexusOk) {
-    Write-Host "  phase 1:  beads + gitnexus + docs seeded + guardrails" -ForegroundColor Gray
+    Write-Host "  phase 1:  beads + gitnexus + docs seeded + guardrails + autoresearch" -ForegroundColor Gray
 } else {
-    Write-Host "  phase 1:  beads + docs seeded + guardrails (gitnexus: DEGRADED)" -ForegroundColor Yellow
+    Write-Host "  phase 1:  beads + docs seeded + guardrails + autoresearch (gitnexus: DEGRADED)" -ForegroundColor Yellow
     Write-Host "            fix: run 'gitnexus analyze . --force' in native PowerShell" -ForegroundColor Gray
 }
-Write-Host "  phase 2:  superpowers-* pipeline + grill + tool injection" -ForegroundColor Gray
-Write-Host "  on-demand: /autoresearch (if installed)" -ForegroundColor Gray
+Write-Host "  phase 2:  superpowers-* pipeline + grill + 4 autoresearch gates" -ForegroundColor Gray
+Write-Host "            probe(①¾) → scenario(②½) → fix-per-task(③) → security(②¾)" -ForegroundColor Gray
+Write-Host "  opt-out:   `$env:DEVFLOW_NO_AUTORESEARCH=1  (disable all auto gates)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Start a dev task in Claude Code — devflow auto-triggers." -ForegroundColor Green

@@ -8,10 +8,10 @@ description: devflow Phase 1 pending — beads/gitnexus not initialized. SKILL: 
 ## Critical Rules
 
 1. **devflow does not reimplement superpowers phases.** Brainstorming, writing plans, git worktrees, subagent-driven-development, code review, and branch finishing are all delegated to `superpowers-*` skills.
-2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, autoresearch, grill session, PRD→beads auto-split, and TDD deep docs are injected at defined points in the superpowers pipeline.
-3. **Phase 2 (Develop) is the main session loop.** It delegates to `superpowers-using-superpowers` for skill discovery, then injects tools at each pipeline stage.
-4. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → plans → implementation + TDD.
-5. **Git guardrails are always active.** Dangerous git commands (force push, reset --hard, etc.) are blocked by a PreToolUse hook. Override only through settings.local.json when intentional.
+2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, and **autoresearch auto-optimization** are injected at defined points.
+3. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
+4. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
+5. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
 
 ## Architecture
 
@@ -22,17 +22,16 @@ description: devflow Phase 1 pending — beads/gitnexus not initialized. SKILL: 
             ▼               ▼               ▼
         Phase 1         Phase 2         Phase 3
         Setup           Develop         Finish
-            │               │               │
-            │          ┌────┴────┐          │
-            ▼          ▼         ▼          ▼
-   ┌────────────────┐ ┌──────────────────┐ ┌──────────┐
-   │ beads init     │ │ plan-grill ①½   │ │  beads   │
-   │ gitnexus analyze│ │ superpowers pipe│ │  close   │
-   │ CONTEXT.md seed │ │ PRD→beads      │ │  report  │
-   │ ADR directory   │ │ TDD deep docs  │ └──────────┘
-   │ guardrails hook │ │ autoresearch   │
-   └────────────────┘ └──────────────────┘
-        session-start       per-task            per-session
+                            │
+                    ┌───────┴───────┐
+                    │               │
+               superpowers      autoresearch
+               pipeline         auto-injected
+                                    │
+                           ┌────────┴────────┐
+                           │    │       │    │
+                          probe scenario fix security
+                           ①¾    ②½   ③   ②¾
 ```
 
 ## The 3 Phases
@@ -41,50 +40,57 @@ description: devflow Phase 1 pending — beads/gitnexus not initialized. SKILL: 
 Phase 1: Setup (project-level, one-time)
   ─────────────────────────────────────────
   Detect deps → bd init → gitnexus analyze → seed docs/
-  → configure guardrails
+  → configure guardrails → install autoresearch
 
   Runs from setup.ps1/setup.sh or auto-detects when
   .beads/ or .gitnexus/ is missing on session start.
-
-  Note: gitnexus analyze may fail on Windows/bash (known SIGSEGV
-  upstream issue with tree-sitter on Node 22). This is NON-FATAL.
-  Phase 1 completes in "degraded" mode — beads and docs are still
-  initialized. Fix later by running in native PowerShell:
-    gitnexus analyze . --force
 
   Creates:
   - docs/CONTEXT.md    (domain vocabulary template)
   - docs/adr/          (architecture decision records)
   - docs/tdd/          (TDD deep reference docs)
-  - .claude/hooks/guardrails-git.ps1  (if not present)
+  - .claude/hooks/guardrails-git.ps1
+  - autoresearch skill (npx skills add uditgoenka/autoresearch)
+
+  Note: gitnexus analyze may fail on Windows/bash (known SIGSEGV).
+  This is NON-FATAL — Phase 1 continues in degraded mode.
+  autoresearch is unaffected.
+
+  Skip autoresearch install: run setup.ps1 with --skip-autoresearch
+  or set DEVFLOW_NO_AUTORESEARCH=1 before setup.
 
 Phase 2: Develop (session-level, each task)
   ─────────────────────────────────────────
-  Delegates to superpowers pipeline, injects tools:
+  Delegates to superpowers pipeline, injects tools AND autoresearch:
 
-  superpowers pipe           devflow injects
-  ──────────────────         ──────────────
-  brainstorming  ────────①── beads: create epic issue
-                                   gitnexus: context for design
-                                   CONTEXT.md: domain vocab
-  ═══ GRILL ════════════════①½══ challenge plan with
-                                   CONTEXT.md + ADR + gitnexus
-                                   refine terms, find blind spots
-                                   → update CONTEXT.md
-  writing-plans  ────────②── beads: create sub-issues per task
-                                   gitnexus: impact analysis
-                                   PRD→beads: auto-split tasks
-  subagent-dev   ────────③── gitnexus context fed to subagents
-                                   beads: bd ready check
-                                   TDD deep docs: testing philosophy
-  code-review             (superpowers native, no devflow injection)
-  finish-branch           (superpowers native)
+  superpowers pipe         devflow injects
+  ────────────────         ──────────────
+  brainstorming  ──────①── beads: create epic issue
+                                 gitnexus: context for design
+                                 CONTEXT.md: domain vocab
+  ══ GRILL ══════════════①½── challenge plan with CONTEXT.md
+                                 + ADR + gitnexus (HITL gate)
+  ══ AUTORESEARCH ═══════①¾── probe: adversarial constraint
+                                 discovery after manual grill
+                                 (/autoresearch:probe)
+  writing-plans  ──────②── beads: create sub-issues per task
+                                 gitnexus: impact analysis
+                                 PRD→beads: auto-split tasks
+  ══ AUTORESEARCH ═══════②½── scenario: edge case discovery
+                                 per task before coding
+                                 (/autoresearch:scenario)
+  subagent-dev   ──────③── gitnexus context fed to subagents
+                                 beads: bd ready check
+                                 TDD deep docs
+                                 ══ per-task quality gate ══
+                                 each task done → :fix
+                                 (/autoresearch:fix)
+  code-review           (superpowers native)
+  ══ AUTORESEARCH ═══════②¾── security: audit changes before
+                                 finish (/autoresearch:security)
+  finish-branch         (superpowers native)
 
-  autoresearch:  Available as on-demand command (/autoresearch)
-                 Not a phase — user invokes when needed
-
-  Background:    Git guardrails PreToolUse hook blocks dangerous
-                 commands (--force, reset --hard, etc.) silently.
+  Background:    Git guardrails block dangerous commands
 
 Phase 3: Finish (project-level, per-session)
   ─────────────────────────────────────────
@@ -101,68 +107,97 @@ Before `superpowers-brainstorming` runs:
 ```yaml
 beads:
   - bd create --title="<feature>" --type=epic
-  - Captures the feature as a trackable top-level issue
 
 gitnexus:
-  - gitnexus context <key-symbol>  (if applicable)
-  - Pre-fetched code context fed to brainstorming subagent
+  - gitnexus context <key-symbol> (if applicable)
 
 context:
   - Load docs/CONTEXT.md for domain vocabulary
   - Load docs/adr/ for past architectural decisions
 ```
 
-### ①½ — Plan-Grill Injection (NEW)
+### ①½ — Plan-Grill Injection (HITL Gate)
 
-After brainstorming produces a design direction, before writing plans:
+After brainstorming, before writing plans:
 
 > Inspired by mattpocock/skills — grill-with-docs
 
 ```yaml
-Context:
-  - Feed the brainstorming output + CONTEXT.md + relevant ADRs
-    into a structured challenge session.
-
 Process:
-  1. Load CONTEXT.md — verify all terms used in the design are
-     defined. Add missing terms.
-  2. Load relevant ADRs — check if the design conflicts with
-     past architectural decisions. Flag if so.
-  3. gitnexus context — verify code-level facts assumed in the
-     design (symbols exist, interfaces match, etc.).
-  4. beads dep check — ensure no blocked dependency exists.
-  5. Invent boundary cases — edge inputs, error states,
-     concurrent access, etc. — that the design doesn't address.
-  6. Output a grill summary to docs/superpowers/specs/ with:
-     - Terms refined or added to CONTEXT.md
-     - Blind spots found and resolved
-     - Confirmed alignment with ADRs
+  1. Load CONTEXT.md — verify all terms are defined
+  2. Load relevant ADRs — check for conflicts
+  3. gitnexus context — verify code-level facts
+  4. beads dep check — ensure no blocked dependency
+  5. Invent boundary cases the design doesn't address
+  6. Output grill report to docs/superpowers/specs/
+
+Note: This is a HUMAN-IN-THE-LOOP step. Must get confirmation.
 ```
 
-The grill session is a human-in-the-loop (HITL) step. It MUST
-present findings and get confirmation before proceeding to plans.
+### ①¾ — Autoresearch Probe Injection ★ AUTO
+
+After grill passes, before writing plans (runs automatically unless opt-out):
+
+> Invokes: `/autoresearch:probe`
+> Duration: ~2 minutes, 8 adversarial personas interrogate the design
+
+```yaml
+When: DEVFLOW_NO_AUTORESEARCH is NOT set
+What: /autoresearch:probe --chain plan,autoresearch
+  Topic: <feature title from brainstorming>
+
+Why: The manual grill finds obvious blind spots.
+     autoresearch:probe goes deeper — 8 adversarial personas
+     surface hidden constraints, contradictions, and assumptions
+     the human missed.
+
+Output:
+  - probe/{date}-{slug}/ with spec, constraints TSV,
+    contradictions, assumptions, handoff.json
+  - These feed directly into writing-plans task decomposition
+
+Opt-out: Tell the agent "skip autoresearch" or set env var
+         DEVFLOW_NO_AUTORESEARCH=1 before session.
+```
 
 ### ② — Writing Plans Injection
 
-After plan is decomposed into tasks, before each task starts:
+After plan is decomposed into tasks:
 
 ```yaml
 beads:
   - bd create --title="<task>" --parent=<epic_id> --type=task
-  - bd dep add <task> <dependency>  (if blocking relationship)
-  - Tasks get hierarchical IDs: bd-xxx.1, bd-xxx.1.1, ...
+  - bd dep add <task> <dependency>
 
 gitnexus:
   - gitnexus impact <symbol> --depth 2
-  - Blast radius data injected into plan context
 
 auto-split (PRD→beads):
-  - If the design doc has "## Task:" headings, run:
-    scripts/prd-to-beads.ps1 (or .sh)
-    -d docs/superpowers/specs/<design>.md
-    -e "<epic-title>"
-    -i <epic_id>
-  - Creates one beads issue per task, sets dependencies
+  - scripts/prd-to-beads.ps1/.sh -d <design.md> -e "<title>" -i <epic_id>
+```
+
+### ②½ — Autoresearch Scenario Injection ★ AUTO
+
+After tasks are decomposed, before implementation starts:
+
+> Invokes: `/autoresearch:scenario`
+> Focus: generate edge cases for each identified task
+
+```yaml
+When: DEVFLOW_NO_AUTORESEARCH is NOT set
+What: /autoresearch:scenario
+  Scenario: <task title>
+  Iterations: 15
+  Focus: edge-cases
+
+Why: Tasks from writing-plans describe WHAT to build.
+     autoresearch:scenario generates boundary conditions,
+     error states, and edge cases for each task so subagent
+     implementers handle them upfront.
+
+Output: scenario/{date}-{slug}/ with detailed test scenarios
+        per task. These are added to task descriptions or
+        TDD test cases before implementation begins.
 ```
 
 ### ③ — Implementation Injection
@@ -171,85 +206,105 @@ During `superpowers-subagent-driven-development`:
 
 ```yaml
 gitnexus:
-  - Main agent pre-fetches gitnexus context for relevant symbols
-  - Feeds context data to implementer/spec-reviewer/quality-reviewer subagents
-  - Subagents do NOT run gitnexus themselves — parent agent passes data
+  - Pre-fetch context, feed to implementer/spec-reviewer/quality-reviewer
+  - Subagents do NOT run gitnexus themselves
 
 beads:
-  - bd ready  (check for blocking tasks before starting new work)
-  - bd update <id> --claim  (atomic task assignment)
+  - bd ready (check blocking tasks)
+  - bd update <id> --claim (atomic assignment)
 
 tdd-deep-docs:
-  - In TDD mode, reference docs/tdd/*.md for:
-    - deep-modules.md    — hiding complexity behind simple interfaces
-    - interface-design.md— designing caller-first contracts
-    - mocking.md         — mock only at system boundaries
-    - refactoring.md     — one-step-at-a-time transformations
-    - tests.md           — test behavior, not implementation
+  - Reference docs/tdd/*.md for testing philosophy
+
+autoresearch:fix — Per-Task Quality Gate ★ AUTO:
+  After EACH task implementation completes, before next task:
+  Invoke: /autoresearch:fix --target "npm run build && npm test"
+  If :fix finds errors → fix them → re-run → pass gate
+  Only then claim next task
+
+  This is a ZERO-ERROR GATE. Each task must pass before
+  the next one starts. (Skip with "skip fix gate")
+```
+
+### ②¾ — Autoresearch Security Injection ★ AUTO
+
+After code review, before finish-branch:
+
+> Invokes: `/autoresearch:security --diff`
+
+```yaml
+When: DEVFLOW_NO_AUTORESEARCH is NOT set
+What: /autoresearch:security --diff
+  Iterations: 10
+
+Why: Last line of defense. Audits only the changed files
+     (--diff mode), applies STRIDE + OWASP Top 10 + red-team
+     analysis with 4 hostile personas.
+
+Output: security/{date}-{slug}/ with structured report.
+        Critical/High findings must be resolved before finish.
+
+Opt-out: Tell agent "skip security audit" or use env var.
 ```
 
 ### Git Guardrails (Background)
 
-A PreToolUse hook on Bash commands inspects every command for
-dangerous git patterns:
+PreToolUse hook blocks dangerous git patterns:
 
 - `git push --force` / `git push -f`
-- `git reset --hard`
-- `git clean -fd`
-- `git branch -D`
-- `git checkout .` / `git restore .`
+- `git reset --hard` / `git clean -fd`
+- `git branch -D` / `git checkout .` / `git restore .`
 
-When matched, the command is DENIED with a clear message.
-To override: add the specific command to `.claude/settings.local.json`
-allow array with explicit intent justification.
+Override via `.claude/settings.local.json` allow array.
 
-### autoresearch
+## Opt-Out Mechanism
 
-Not a phase injection — registered as an available command:
+Autoresearch is ON by default at 4 pipeline points.
+To disable globally:
 
-- `/autoresearch:debug` — systematic bug hunting
-- `/autoresearch:fix` — iterative repair until zero errors
-- `/autoresearch:ship` — universal release workflow
-- `/autoresearch:security` — STRIDE + OWASP audit
-- `/autoresearch:plan` — interactive experiment design
+```bash
+# PowerShell (before Claude Code session):
+$env:DEVFLOW_NO_AUTORESEARCH = 1
 
-Invoked on-demand by user or main agent when appropriate.
+# bash (before Claude Code session):
+export DEVFLOW_NO_AUTORESEARCH=1
+```
+
+To skip a single gate, tell the agent:
+- "skip probe" (skips ①¾)
+- "skip scenario" (skips ②½)
+- "skip fix gate" (skips per-task :fix in ③)
+- "skip security audit" (skips ②¾)
 
 ## Project Structure
 
 ```
 devflow/
-├── SKILL.md                    # Orchestrator definition (this file)
+├── SKILL.md                    # Orchestrator definition
 ├── setup.ps1                   # Phase 1 Setup (Windows)
 ├── setup.sh                    # Phase 1 Setup (Unix)
 ├── README.md
 ├── LICENSE
 ├── .gitignore
 ├── .claude/
-│   ├── settings.json           # Project hooks (SessionStart + PreToolUse)
-│   ├── settings.local.json     # Local permissions overrides (gitignored)
+│   ├── settings.json           # Project hooks
+│   ├── settings.local.json     # Local overrides (gitignored)
 │   └── hooks/
-│       ├── devflow-init-check.ps1  # Phase 1 detection on session start
-│       └── guardrails-git.ps1      # Dangerous git command blocker
+│       ├── devflow-init-check.ps1
+│       └── guardrails-git.ps1
 ├── scripts/
-│   ├── prd-to-beads.ps1        # Design doc → beads issues (Windows)
-│   └── prd-to-beads.sh         # Design doc → beads issues (Unix)
+│   ├── prd-to-beads.ps1
+│   └── prd-to-beads.sh
 ├── docs/
-│   ├── CONTEXT.md              # Domain vocabulary (ubiquitous language)
-│   ├── adr/                    # Architecture Decision Records
-│   │   ├── README.md
-│   │   └── 0001-use-devflow-3-phase-orchestration.md
-│   └── tdd/                    # TDD deep reference docs
-│       ├── deep-modules.md
-│       ├── interface-design.md
-│       ├── mocking.md
-│       ├── refactoring.md
-│       └── tests.md
-└── docs/superpowers/specs/     # Design documents
+│   ├── CONTEXT.md
+│   ├── adr/
+│   └── tdd/
+└── docs/superpowers/specs/
 ```
 
 devflow has no prompts directory. All subagent prompts are owned by
-`superpowers-subagent-driven-development`.
+`superpowers-subagent-driven-development`. autoresearch is a separate
+skill installed via `npx skills add`.
 
 ## Prerequisites
 
@@ -257,7 +312,7 @@ devflow has no prompts directory. All subagent prompts are owned by
 - **beads** — `go install github.com/gastownhall/beads/cmd/bd@latest`
 - **gitnexus** — `npm install -g gitnexus`
 - **superpowers** — `/plugin install superpowers@claude-plugins-official`
-- **autoresearch** (optional) — `npx skills add uditgoenka/autoresearch`
+- **autoresearch** — installed by default via `npx skills add uditgoenka/autoresearch`
 - **Python ≥ 3.10 + uv** (only for autoresearch ML mode)
 
 ## Setup for New Project
@@ -270,17 +325,20 @@ devflow has no prompts directory. All subagent prompts are owned by
 # bash setup.sh
 
 # This runs Phase 1: checks deps, bd init, gitnexus analyze,
-# seeds docs/CONTEXT.md, docs/adr/, docs/tdd/,
-# and installs git guardrails hook.
+# seeds docs/, installs guardrails, installs autoresearch.
+
+# To skip autoresearch:
+# $env:DEVFLOW_NO_AUTORESEARCH=1; .\setup.ps1
 ```
 
 ## Rules
 
-- Build verification is **mandatory** before commit — run `npm run build` (or equivalent)
+- Build verification is **mandatory** before commit
 - Code is not done until `git push` succeeds
-- Git guardrails block dangerous operations — override consciously, not habitually
-- Grill session is required between brainstorming and writing-plans (HITL gate)
-- PRD→beads auto-split is preferred over manual bd create when design docs have tasks
-- TDD discipline enforced by superpowers-test-driven-development + docs/tdd/ references
-- CONTEXT.md and ADRs should be updated as the project's domain understanding evolves
+- Git guardrails block dangerous operations
+- Grill session is required (HITL gate between brainstorming and plans)
+- **Autoresearch gates run automatically — do not skip unless user says so**
+- PRD→beads auto-split preferred over manual bd create
+- TDD discipline enforced by superpowers-test-driven-development + docs/tdd/
+- CONTEXT.md and ADRs evolve with project understanding
 - 3-round max for subagent review loops; escalate to human after 3

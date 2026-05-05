@@ -98,7 +98,23 @@ else
     echo -e "${GRAY}[SKIP] docs/tdd/ already exists${NC}"
 fi
 
-# ---- Step 7: Check git guardrails hook ----
+# ---- Step 7: Install autoresearch (unless opted out) ----
+echo ""
+echo -e "${YELLOW}--- autoresearch install ---${NC}"
+if [ "${DEVFLOW_NO_AUTORESEARCH:-}" = "1" ]; then
+    echo -e "${GRAY}[SKIP] DEVFLOW_NO_AUTORESEARCH is set — skipping${NC}"
+else
+    if npx skills add uditgoenka/autoresearch 2>/dev/null; then
+        echo -e "${GREEN}[PASS] autoresearch installed${NC}"
+        echo -e "${GRAY}       Auto-optimization at probe/scenario/fix/security gates.${NC}"
+        echo -e "${GRAY}       Disable: export DEVFLOW_NO_AUTORESEARCH=1${NC}"
+    else
+        echo -e "${YELLOW}[WARN] autoresearch install failed${NC}"
+        echo -e "${GRAY}       Run manually: npx skills add uditgoenka/autoresearch${NC}"
+    fi
+fi
+
+# ---- Step 8: Check git guardrails hook ----
 if [ ! -f .claude/hooks/guardrails-git.ps1 ]; then
     echo -e "${YELLOW}[WARN] .claude/hooks/guardrails-git.ps1 not found${NC}"
     echo -e "${GRAY}       Copy from devflow skill directory to enable git safety.${NC}"
@@ -106,16 +122,17 @@ else
     echo -e "${GREEN}[PASS] git guardrails hook present${NC}"
 fi
 
-# ---- Step 8: Summary ----
+# ---- Step 9: Summary ----
 echo ""
 echo -e "${CYAN}=== devflow ready ===${NC}"
 if [ "$GITNEXUS_OK" = "true" ]; then
-    echo -e "${GRAY}  phase 1:  beads + gitnexus + docs seeded + guardrails${NC}"
+    echo -e "${GRAY}  phase 1:  beads + gitnexus + docs seeded + guardrails + autoresearch${NC}"
 else
-    echo -e "${YELLOW}  phase 1:  beads + docs seeded + guardrails (gitnexus: DEGRADED)${NC}"
+    echo -e "${YELLOW}  phase 1:  beads + docs seeded + guardrails + autoresearch (gitnexus: DEGRADED)${NC}"
     echo -e "${GRAY}            fix: run 'gitnexus analyze . --force' in native PowerShell${NC}"
 fi
-echo -e "${GRAY}  phase 2:  superpowers-* pipeline + grill + tool injection${NC}"
-echo -e "${GRAY}  on-demand: /autoresearch (if installed)${NC}"
+echo -e "${GRAY}  phase 2:  superpowers-* pipeline + grill + 4 autoresearch gates${NC}"
+echo -e "${GRAY}            probe(①¾) → scenario(②½) → fix-per-task(③) → security(②¾)${NC}"
+echo -e "${GRAY}  opt-out:   export DEVFLOW_NO_AUTORESEARCH=1  (disable all auto gates)${NC}"
 echo ""
 echo -e "${GREEN}Start a dev task in Claude Code — devflow auto-triggers.${NC}"

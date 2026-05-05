@@ -60,3 +60,11 @@ PreToolUse hook。拦截危险 git 命令 (--force, reset --hard, clean -fd, bra
 - SKILL.md 中的注入点编号: ① brainstorming, ①½ grill, ② plans, ③ implementation
 - Hook 输出 JSON 必须包含 hookEventName
 - PowerShell 脚本使用 `.ps1` 扩展名, bash 使用 `.sh`
+
+## devops
+
+### Merge semantics
+安装脚本检测已有配置、增量追加而非覆盖的行为。
+
+### Idempotent
+重复运行安装脚本产生相同结果，不会破坏已有配置。

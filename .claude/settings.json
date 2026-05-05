@@ -1,78 +1,32 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "hooks": {
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "bd prime",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "powershell -NoProfile -File .claude/hooks/guardrails-git.ps1",
-            "shell": "powershell",
-            "statusMessage": "devflow: checking git safety...",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "bash .claude/hooks/guardrails-git.sh",
-            "shell": "bash",
-            "statusMessage": "devflow: checking git safety...",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
-            "shell": "powershell",
-            "statusMessage": "devflow: checking project state...",
-            "timeout": 10,
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "bash .claude/hooks/devflow-init-check.sh",
-            "shell": "bash",
-            "statusMessage": "devflow: checking project state...",
-            "timeout": 10,
-            "type": "command"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "command": "bd prime",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ]
-  },
   "permissions": {
+    "allow": [
+      "Bash(export PATH=\"$PATH:/c/Users/Administrator/AppData/Local/Microsoft/WinGet/Links\")",
+      "PowerShell(powershell -NoProfile -File scripts/merge-settings.ps1 -DryRun 2>&1 | Out-String)",
+      "Bash(cp .claude/settings.json .claude/settings.json.testbak)",
+      "Bash(bash scripts/merge-settings.sh --target .claude/settings.test.json)",
+      "Bash(python -m json.tool)",
+      "Bash(rm .claude/settings.test.json)",
+      "Bash(rm .claude/settings.json.testbak)",
+      "Bash(bash scripts/merge-guardrails.sh)",
+      "PowerShell(powershell -NoProfile -File scripts/merge-guardrails.ps1 2>&1)",
+      "Bash(bash -x scripts/merge-guardrails.sh)",
+      "Bash(bash -c ' *)",
+      "PowerShell(powershell -NoProfile -File scripts/check-superpowers.ps1 -Quiet 2>&1; $LASTEXITCODE)",
+      "Bash(bash scripts/check-superpowers.sh --quiet)",
+      "Bash(echo \"exit=$?\")",
+      "PowerShell(powershell -NoProfile -File scripts/merge-gitignore.ps1 -DryRun 2>&1)",
+      "Bash(bash scripts/merge-gitignore.sh --dry-run)",
+      "PowerShell(powershell -NoProfile -File scripts/merge-gitignore.ps1 2>&1)",
+      "PowerShell(powershell -NoProfile -File scripts/merge-docs.ps1 -DryRun 2>&1)",
+      "PowerShell(Get-Content scripts/merge-docs.ps1 -Encoding Byte -TotalCount 3 | ForEach-Object { \"{0:X2}\" -f $_ })",
+      "Bash(bash scripts/merge-docs.sh --dry-run)",
+      "Bash(xxd)",
+      "Bash(python)",
+      "Bash(python _update_section9.py)",
+      "Bash(bash scripts/test-guardrails.sh)"
+    ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-writing-plans",
@@ -80,7 +34,80 @@
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-subagent-driven-development",
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-requesting-code-review",
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-finishing-a-development-branch",
-      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-test-driven-development"
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-test-driven-development",
+      "F:\\AI\\devflow\\.claude"
+    ]
+  },
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File .claude/hooks/guardrails-git.ps1",
+            "shell": "powershell",
+            "timeout": 5,
+            "statusMessage": "devflow: checking git safety..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/guardrails-git.sh",
+            "shell": "bash",
+            "timeout": 5,
+            "statusMessage": "devflow: checking git safety..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
+            "shell": "powershell",
+            "timeout": 10,
+            "statusMessage": "devflow: checking project state..."
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/devflow-init-check.sh",
+            "shell": "bash",
+            "timeout": 10,
+            "statusMessage": "devflow: checking project state..."
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime"
+          }
+        ]
+      }
     ]
   }
 }

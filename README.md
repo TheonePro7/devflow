@@ -539,8 +539,12 @@ devflow/
 │                                     - 5 个注入点的详细 YAML 配置
 │                                     - 设计规则和约束
 │
-├── setup.ps1                       # Phase 1 安装脚本（Windows PowerShell）
-├── setup.sh                        # Phase 1 安装脚本（Unix bash）
+├── setup.ps1                       # Phase 1 安装脚本（Windows PowerShell）— 支持 --merge / --fresh
+├── setup.sh                        # Phase 1 安装脚本（Unix bash）— 支持 --merge / --fresh
+├── install.ps1                     # 一键安装器（Windows）：克隆 + 安装工具 + 运行 setup
+├── install.sh                      # 一键安装器（Unix）：克隆 + 安装工具 + 运行 setup
+├── uninstall.ps1                   # 分级安全卸载（Windows）：hooks/guardrails/skill/docs/beads/gitnexus
+├── uninstall.sh                    # 分级安全卸载（Unix）：hooks/guardrails/skill/docs/beads/gitnexus
 ├── README.md                       # 本文档
 ├── CLAUDE.md                       # devflow 项目开发约定（供 AI agent 使用）
 ├── LICENSE                         # MIT License
@@ -574,6 +578,26 @@ devflow/
 │   │                                        -d docs/specs/design.md
 │   │                                        -e "My Feature"
 │   │                                        [-i bd-xxxx]
+│   │
+│   ├── merge-settings.ps1          # settings.json 合并助手 — hooks 去重 + 权限保留（Windows）
+│   ├── merge-settings.sh           # settings.json 合并助手 — hooks 去重 + 权限保留（Unix）
+│   │                                 Idempotent: 第二遍运行提示 "already up to date"
+│   │
+│   ├── merge-guardrails.ps1        # guardrails 规则差异合并 — 追加缺失模式（Windows）
+│   ├── merge-guardrails.sh         # guardrails 规则差异合并 — 追加缺失模式（Unix）
+│   │                                 Idempotent: 已有模式跳过，仅追加新模式
+│   │
+│   ├── merge-gitignore.ps1         # .gitignore 条目合并 — 精确行匹配，仅追加缺失（Windows）
+│   ├── merge-gitignore.sh          # .gitignore 条目合并 — 精确行匹配，仅追加缺失（Unix）
+│   │                                 Idempotent: 已有条目跳过
+│   │
+│   ├── merge-docs.ps1              # CONTEXT.md + ADR + TDD 文档合并（Windows）
+│   ├── merge-docs.sh               # CONTEXT.md + ADR + TDD 文档合并（Unix）
+│   │                                 Idempotent: CONTEXT.md 追加缺失术语，ADR 补链接，TDD 首次写入
+│   │
+│   ├── check-superpowers.ps1       # superpowers skill 安装检测（Windows）
+│   ├── check-superpowers.sh        # superpowers skill 安装检测（Unix）
+│   │                                 Exit 0 = 全部已安装，Exit 1 = 有缺失
 │   │
 │   ├── test-guardrails.ps1         # Git guardrails 验证测试（24 用例）
 │   │                                 Run: powershell -File scripts/test-guardrails.ps1
@@ -612,48 +636,84 @@ devflow/
 
 ### 全新安装
 
-用户只需确保系统有 **Go**、**Node.js ≥ 18**、**Git**。其他全部自动。
+用户只需确保系统有 **Go**、**Node.js >= 18**、**Git**。其他全部自动。
 
 ```bash
-# 1. 安装 devflow skill
+# 1. 克隆 devflow skill
 git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
 
-# 2. 在 Claude Code 中安装 superpowers（在 chat 中输入）
-# /plugin install superpowers@claude-plugins-official
-
-# 3. 进入项目目录，启动 Claude Code
+# 2. 进入项目目录，运行一键安装器
 cd your-project
-claude
+bash ~/.claude/skills/devflow/install.sh
+
+# 3. 在 Claude Code 中安装 superpowers 插件
+# 在 chat 中输入: /plugin install superpowers@claude-plugins-official
+
+# 4. 完成 --- 直接开始提需求开发
 ```
 
-首次启动时：
-1. SessionStart hook 自动检测 Phase 1 状态
-2. 发现未初始化 → 自动安装 beads (bd)、gitnexus
-3. 自动运行 `bd init`、`gitnexus analyze`、创建 docs/
-4. 自动安装 autoresearch
-5. 完成后即可直接提需求开发
+**install.sh / install.ps1** 自动完成：
+1. 检测 Go、Node.js、Git 是否安装（缺失则提示）
+2. 克隆 devflow 到 `~/.claude/skills/devflow`（已有则跳过）
+3. 检测 superpowers skill 是否就绪
+4. 以 **merge 模式**运行 setup（保留所有已有配置）
+5. 输出后续操作提示
 
-> **零手动安装**：beads、gitnexus、autoresearch 均为自动安装。用户不需要手动 `go install` 或 `npm install -g`。
+> **零手动安装**：beads、gitnexus、autoresearch 均为自动安装。
+> 用户不需要手动 `go install`、`npm install -g` 或手动配置 hooks。
 
-### 初始化后
+#### 离线安装
 
-1. （可选）编辑 `docs/CONTEXT.md`，填充项目领域术语
-2. 在 Claude Code 中提出开发需求 —— SessionStart hook 自动检测 Phase 1 状态
+```bash
+# 已有 devflow 副本时跳过克隆
+bash ~/.claude/skills/devflow/install.sh --offline
+```
 
-### 安装后自动化程度
+#### 通过代理安装
 
-| 环节 | 是否自动 | 说明 |
-|------|---------|------|
-| Phase 1 检测 | ✅ 自动 | SessionStart hook 每次会话检测 Phase 1 状态 |
-| Phase 1 安装 | ✅ **自动** | Hook 检测到未初始化 → agent 自动安装缺失工具（bd、gitnexus）→ 自动运行 setup。无需用户操作 |
-| devflow skill 加载 | ✅ 自动 | Hook 始终输出上下文，SKILL.md 在每次会话自动加载 |
-| Git guardrails | ✅ 自动 | PreToolUse hook 拦截每个危险 git 命令，无需用户操作 |
-| Autoresearch 4 门 | ✅ 自动 | probe → scenario → fix → security 在管道中自动触发 |
-| Phase 2 开发管道 | ✅ 自动 | 用户提出需求后，devflow 自动按 ①→①½→①¾→②→②½→③→review→②¾ 编排 |
-| Phase 3 收尾 | 👆 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
+```bash
+GIT_PROXY=http://proxy:8080 bash ~/.claude/skills/devflow/install.sh
+```
 
-> 用户只需：① 确保 Go + Node.js ≥ 18 + Git 已安装 → ② 每次会话提出开发需求 → ③ 会话结束时确认收尾。
-> 其余全部自动——包括首次安装。
+#### Windows PowerShell
+
+```powershell
+# 一键安装
+powershell -File ~/.claude/skills/devflow/install.ps1
+
+# 离线安装
+powershell -File ~/.claude/skills/devflow/install.ps1 --Offline
+```
+
+### setup 模式：--merge（默认）vs --fresh
+
+setup 脚本支持两种运行模式，由 install 脚本自动以 `--merge` 模式调用：
+
+| 模式 | 行为 | 适用场景 |
+|------|------|----------|
+| `--merge`（默认） | 检测已有配置 -> 增量追加，**不覆盖** | 已有项目的增量接入 |
+| `--fresh` | 覆盖式安装（先备份再覆盖） | 新项目或希望重置配置 |
+
+```bash
+# 单独运行 setup（install 已自动调用）
+bash setup.sh --merge      # 合并模式（默认，推荐）
+bash setup.sh --fresh      # 全新安装
+```
+
+### 合并语义（Merge Semantics）
+
+每个合并组件的行为规则：
+
+| 组件 | 合并策略 | 幂等性 |
+|------|----------|--------|
+| **settings.json** | hooks 按 (matcher, command, type, shell) 去重；additionalDirectories 归一化路径去重；已有 permissions/env 保留 | 第二遍运行提示 "already up to date" |
+| **guardrails 规则** | 解析并比对现有 12 个危险模式列表，仅追加缺失的模式 | 已有模式跳过 |
+| **.gitignore** | 精确行匹配，逐条目比对，仅追加不存在的条目 | 已有条目跳过 |
+| **CONTEXT.md** | 提取已有词汇表条目，追加新的种子术语 | 不重复追加 |
+| **ADR 文档** | 遍历 docs/adr/ 已有文件，diff 索引链接，仅追加未列出的 ADR | 已索引的 ADR 跳过 |
+| **TDD 文档** | 首次写入模板文档；用户已修改的文件不动 | 已有文件跳过 |
+
+> 合并失败时自动备份原文件（如 `settings.json.bak`），不影响已有数据。
 
 ### 验证安装
 
@@ -665,6 +725,54 @@ gitnexus --version  # gitnexus 可用
 ls .beads/          # Phase 1 已完成
 ls .gitnexus/       # gitnexus 索引已构建
 ```
+
+### 卸载
+
+devflow 提供分级安全卸载，按数据丢失风险分为三个层级：
+
+```bash
+# 查看所有卸载选项
+bash uninstall.sh --help
+
+# 卸载安全组件（hooks + guardrails + skill + autoresearch）
+bash uninstall.sh --hooks --guardrails --skill --autoresearch
+
+# 一键卸载安全组件
+bash uninstall.sh --all
+
+# 完全卸载（含数据删除）
+bash uninstall.sh --all --force
+```
+
+#### 卸载层级
+
+| 层级 | 级别 | 参数 | 行为 |
+|------|------|------|------|
+| **Tier 1** | 安全（自动） | `--hooks --guardrails --skill --autoresearch` | 自动删除，无需确认 |
+| **Tier 2** | 提示（手动） | `--docs` | 打印 docs/ 目录移除命令，用户自行决定 |
+| **Tier 3** | 数据丢失（需 --force） | `--beads --gitnexus` | 删除前显示数据丢失警告，需 --force 确认 |
+
+```powershell
+# Windows PowerShell
+.\uninstall.ps1 --hooks --guardrails --skill          # 安全卸载
+.\uninstall.ps1 --all                                 # 全部安全组件
+.\uninstall.ps1 --all --Force                          # 完全卸载含数据
+```
+
+### 安装后自动化程度
+
+| 环节 | 是否自动 | 说明 |
+|------|---------|------|
+| Phase 1 检测 | 自动 | SessionStart hook 每次会话检测 Phase 1 状态 |
+| Phase 1 安装 | **自动** | Hook 检测到未初始化 -> agent 自动安装缺失工具（bd、gitnexus）-> 自动运行 setup。无需用户操作 |
+| devflow skill 加载 | 自动 | Hook 始终输出上下文，SKILL.md 在每次会话自动加载 |
+| Git guardrails | 自动 | PreToolUse hook 拦截每个危险 git 命令，无需用户操作 |
+| Autoresearch 4 门 | 自动 | probe -> scenario -> fix -> security 在管道中自动触发 |
+| Phase 2 开发管道 | 自动 | 用户提出需求后，devflow 自动按 1->1.5->1.75->2->2.5->3->review->2.75 编排 |
+| Phase 3 收尾 | 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
+
+> 用户只需：（1）确保 Go + Node.js >= 18 + Git 已安装 -> （2）一键运行 install.sh -> （3）在 Claude Code 中输入 `/plugin install superpowers@claude-plugins-official` -> （4）每次会话提出开发需求 -> （5）会话结束时确认收尾。
+> 其余全部自动。
 
 ---
 
@@ -706,9 +814,14 @@ ls .gitnexus/       # gitnexus 索引已构建
 ### 场景 3：新项目接入 devflow
 
 ```bash
-# 1. 安装依赖 + devflow skill
-# 2. 运行 setup.ps1
-# 3. 编辑 docs/CONTEXT.md
+# 1. 在项目根目录运行一键安装器
+cd your-project
+bash ~/.claude/skills/devflow/install.sh
+
+# 2. 在 Claude Code 中安装 superpowers 插件
+# /plugin install superpowers@claude-plugins-official
+
+# 3. 编辑 docs/CONTEXT.md（可选）
 # 4. git add + commit + push
 # 5. 在 Claude Code 中开始开发
 #    SessionStart hook 会识别 Phase 1 已完成
@@ -793,10 +906,20 @@ A: ```bash
 cd ~/.claude/skills/devflow
 git pull
 ```
+更新后建议在项目目录重新运行 setup（merge 模式）以同步最新配置：
+```bash
+bash ~/.claude/skills/devflow/setup.sh --merge
+```
 
 ### Q: 如何迁移到新机器？
 
-A: 克隆 devflow skill，在新项目的项目根目录运行 setup.ps1。`.claude/settings.json` 和 hooks 需要重新配置（或从旧项目复制）。
+A: 在新机器上克隆 devflow skill，然后在项目根目录运行 `install.sh`：
+```bash
+# 新机器上一键安装（自动克隆 devflow + 运行 setup）
+cd your-project
+bash ~/.claude/skills/devflow/install.sh
+```
+`--merge` 模式会自动保留已存在的配置，仅补充缺失项。
 
 ---
 

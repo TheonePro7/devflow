@@ -104,11 +104,32 @@ if [ -d .gitnexus ]; then
   echo -e "${YELLOW}[SKIP] .gitnexus/ already exists — skipping (use --fresh to rebuild)${NC}"
   GITNEXUS_OK=true
 else
-  if npx gitnexus analyze . --force 2>/dev/null; then
-    GITNEXUS_OK=true
-    echo -e "${GREEN}[PASS] gitnexus index built${NC}"
-  else
-    echo -e "${YELLOW}[WARN] gitnexus analyze failed (non-fatal)${NC}"
+  # Try Docker-based gitnexus first (bypasses tree-sitter native module issues)
+  if docker ps >/dev/null 2>&1; then
+    echo -e "${GRAY}[INFO] Docker detected — using gitnexus Docker image...${NC}"
+    IMAGE="ghcr.io/abhigyanpatwari/gitnexus:latest"
+    if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+      docker pull "$IMAGE" >/dev/null 2>&1
+    fi
+    REPO="$(pwd)"
+    CLI="node /app/gitnexus/dist/cli/index.js"
+    if docker run --rm -v "$REPO:/repo" --entrypoint sh "$IMAGE" -c \
+         "$CLI analyze /repo --force" 2>/dev/null; then
+      GITNEXUS_OK=true
+      echo -e "${GREEN}[PASS] gitnexus index built (via Docker)${NC}"
+    else
+      echo -e "${YELLOW}[WARN] gitnexus Docker analyze failed — falling back to native${NC}"
+    fi
+  fi
+
+  # Fall back to native if Docker unavailable or failed
+  if [ "$GITNEXUS_OK" != "true" ]; then
+    if npx gitnexus analyze . --force 2>/dev/null; then
+      GITNEXUS_OK=true
+      echo -e "${GREEN}[PASS] gitnexus index built (native)${NC}"
+    else
+      echo -e "${YELLOW}[WARN] gitnexus analyze failed (non-fatal)${NC}"
+    fi
   fi
 fi
 

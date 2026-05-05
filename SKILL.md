@@ -220,7 +220,9 @@ Phase 1: Setup (project-level, one-time, FULLY AUTOMATIC)
   - autoresearch skill (npx skills add uditgoenka/autoresearch)
 
   Note: gitnexus analyze may fail on Windows/bash (known SIGSEGV).
-  This is NON-FATAL — Phase 1 continues in degraded mode.
+  The setup script auto-detects Docker and uses it to bypass this issue.
+  See scripts/gitnexus-docker.ps1/.sh for manual Docker usage. If
+  Docker is unavailable, Phase 1 continues in degraded mode.
   autoresearch is unaffected.
 
   Skip autoresearch install: run setup.ps1 with --skip-autoresearch
@@ -233,20 +235,21 @@ Phase 2: Develop (session-level, each task)
   superpowers pipe         devflow injects
   ────────────────         ──────────────
   brainstorming  ──────①── beads: create epic issue
-                                 gitnexus: context for design
+                                 gitnexus-docker: context <核心符号>
                                  CONTEXT.md: domain vocab
   ══ GRILL ══════════════①½── challenge plan with CONTEXT.md
-                                 + ADR + gitnexus (HITL gate)
+                                 + ADR + gitnexus-docker impact (HITL gate)
   ══ AUTORESEARCH ═══════①¾── probe: adversarial constraint
                                  discovery after manual grill
                                  (/autoresearch:probe)
   writing-plans  ──────②── beads: create sub-issues per task
-                                 gitnexus: impact analysis
+                                 gitnexus-docker: impact <接口> --depth 2
                                  PRD→beads: auto-split tasks
   ══ AUTORESEARCH ═══════②½── scenario: edge case discovery
                                  per task before coding
                                  (/autoresearch:scenario)
-  subagent-dev   ──────③── gitnexus context fed to subagents
+  subagent-dev   ──────③── gitnexus-docker: context <目标函数>
+                                 (fed to subagents)
                                  beads: bd ready check
                                  TDD deep docs
                                  ══ per-task quality gate ══
@@ -490,8 +493,11 @@ Before `superpowers-brainstorming` runs:
 beads:
   - bd create --title="<feature>" --type=epic
 
-gitnexus:
-  - gitnexus context <key-symbol> (if applicable)
+gitnexus (run via Docker — bypasses Windows SIGSEGV):
+  - Determine the core symbols/files this feature relates to
+  - Run: .\scripts\gitnexus-docker.ps1 context <核心符号>  (Windows)
+  - Run: bash scripts/gitnexus-docker.sh context <core-symbol>  (Unix)
+  - If no obvious symbol, use: gitnexus-docker query "<domain-term>"
 
 context:
   - Load docs/CONTEXT.md for domain vocabulary
@@ -508,7 +514,9 @@ After brainstorming, before writing plans:
 Process:
   1. Load CONTEXT.md — verify all terms are defined
   2. Load relevant ADRs — check for conflicts
-  3. gitnexus context — verify code-level facts
+  3. gitnexus-docker impact — verify design doesn't break existing code
+     .\scripts\gitnexus-docker.ps1 impact <design-interface> --depth 2  (Windows)
+     bash scripts/gitnexus-docker.sh impact <design-interface> --depth 2  (Unix)
   4. beads dep check — ensure no blocked dependency
   5. Invent boundary cases the design doesn't address
   6. Output grill report to docs/superpowers/specs/
@@ -551,8 +559,11 @@ beads:
   - bd create --title="<task>" --parent=<epic_id> --type=task
   - bd dep add <task> <dependency>
 
-gitnexus:
-  - gitnexus impact <symbol> --depth 2
+gitnexus (via Docker):
+  - For each interface/symbol that will be modified, check blast radius:
+    .\scripts\gitnexus-docker.ps1 impact <symbol> --depth 2  (Windows)
+    bash scripts/gitnexus-docker.sh impact <symbol> --depth 2  (Unix)
+  - Include affected areas in task descriptions
 
 auto-split (PRD→beads):
   - scripts/prd-to-beads.ps1/.sh -d <design.md> -e "<title>" -i <epic_id>
@@ -587,8 +598,11 @@ Output: scenario/{date}-{slug}/ with detailed test scenarios
 During `superpowers-subagent-driven-development`:
 
 ```yaml
-gitnexus:
-  - Pre-fetch context, feed to implementer/spec-reviewer/quality-reviewer
+gitnexus (via Docker):
+  - Before dispatching each task, fetch context for the target function/file:
+    .\scripts\gitnexus-docker.ps1 context <目标函数>  (Windows)
+    bash scripts/gitnexus-docker.sh context <target-function>  (Unix)
+  - Include gitnexus output in subagent prompt as additional context
   - Subagents do NOT run gitnexus themselves
 
 beads:

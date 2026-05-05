@@ -27,6 +27,7 @@ Dolt-backed issue tracker。层级 ID (bd-xxx.y)、依赖管理、状态追踪�
 
 ### gitnexus
 代码知识图谱。分析仓库构建符号索引。命令: `gitnexus context` / `gitnexus impact`。
+Windows 下 tree-sitter 原生模块 crash，通过 Docker 容器运行（`scripts/gitnexus-docker.ps1`）。
 
 ### Plan-grill
 HITL 关卡。位于 brainstorming → writing-plans 之间。用 CONTEXT.md + ADR + gitnexus 拷问设计盲点。
@@ -69,6 +70,7 @@ Edit|Write 操作前的阶段合法性检查。拦截规则：
 
 ### SIGSEGV (gitnexus)
 已知问题。gitnexus 在 Windows/bash (Node 22) 下 tree-sitter 原生模块 crash，exit code 139。
+解决：用 Docker 容器运行 — `scripts/gitnexus-docker.ps1` 自动处理。
 
 ## Architecture Decisions
 

@@ -97,12 +97,35 @@ if (Test-Path ".gitnexus") {
     $ignoreGitnexus = $true
 }
 if (-not $ignoreGitnexus) {
-    gitnexus analyze . --force 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        $gitnexusOk = $true
-        Write-Host "[PASS] gitnexus index built" -ForegroundColor Green
-    } else {
-        Write-Host "[WARN] gitnexus analyze failed (exit code $LASTEXITCODE) - non-fatal" -ForegroundColor Yellow
+    # Try Docker-based gitnexus first (bypasses Windows tree-sitter SIGSEGV)
+    $dockerAvailable = $false
+    try {
+        $null = docker ps 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { $dockerAvailable = $true }
+    } catch { }
+
+    if ($dockerAvailable) {
+        Write-Host "[INFO] Docker detected — using gitnexus Docker image..." -ForegroundColor Gray
+        $repoPath = (Get-Location).Path
+        docker run --rm -v "${repoPath}:/repo" --entrypoint "sh" ghcr.io/abhigyanpatwari/gitnexus:latest `
+            "node /app/gitnexus/dist/cli/index.js analyze /repo --force" 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $gitnexusOk = $true
+            Write-Host "[PASS] gitnexus index built (via Docker)" -ForegroundColor Green
+        } else {
+            Write-Host "[WARN] gitnexus Docker analyze failed — falling back to native" -ForegroundColor Yellow
+        }
+    }
+
+    if (-not $gitnexusOk) {
+        # Fall back to native (may SIGSEGV on Windows — non-fatal)
+        gitnexus analyze . --force 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $gitnexusOk = $true
+            Write-Host "[PASS] gitnexus index built (native)" -ForegroundColor Green
+        } else {
+            Write-Host "[WARN] gitnexus analyze failed (exit code $LASTEXITCODE) — non-fatal" -ForegroundColor Yellow
+        }
     }
 }
 

@@ -52,7 +52,7 @@ Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不�
 1. **devflow does not reimplement superpowers phases.** Brainstorming, writing plans, git worktrees, subagent-driven-development, code review, and branch finishing are all delegated to `superpowers-*` skills.
 2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, autoresearch auto-optimization, and **screenshot-to-code frontend generation** are injected at defined points.
 3. **Phase 0 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 0 runs a 4-stage adaptive discovery, then invokes to-prd to produce the final PRD. Phase 0.5 (Design) follows — frontend architecture + UI generation before any backend code.
-4. **Phase 0/0.5 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude structures and drives the process. Hard gates (grill, autoresearch) apply from Phase 2 onward.
+4. **Phase 0/0.5 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude drives the 4-stage discovery and invokes to-prd for formatting. Hard gates (grill, autoresearch) apply from Phase 2 onward.
 5. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
 6. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
 7. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.

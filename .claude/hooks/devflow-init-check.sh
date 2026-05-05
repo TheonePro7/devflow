@@ -28,23 +28,22 @@ if [ "$all_ok" -eq 0 ]; then
   [ "$gitnexus_installed" -eq 0 ] && issues="${issues}gitnexus not installed; "
   [ "$beads_init" -eq 0 ] && issues="${issues}beads not initialized (run 'bd init'); "
   [ "$gitnexus_init" -eq 0 ] && issues="${issues}gitnexus index not built (run 'gitnexus analyze .'); "
-  # Remove trailing "; "
   issues="${issues%; }"
 
   summary="devflow Phase 1 pending — ${issues}"
   system_msg="devflow: Phase 1 setup needed. Run setup.ps1 or setup.sh to initialize beads + gitnexus."
 
-  # Build JSON — use jq if available, otherwise fallback to printf
   if command -v jq &>/dev/null; then
     jq -n \
       --arg msg "$system_msg" \
       --arg ctx "$summary" \
       '{$msg, hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
   else
-    # Minimal JSON without jq (assumes no special chars in messages)
     printf '{"systemMessage":"%s","hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}' "$system_msg" "$summary"
   fi
+else
+  # Phase 1 OK — always inject context so SKILL.md auto-triggers
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"devflow Phase 1 ready — beads + gitnexus + autoresearch initialized. devflow 3-phase orchestrator available."}}'
 fi
-# else: no output = all good, nothing injected
 
 exit 0

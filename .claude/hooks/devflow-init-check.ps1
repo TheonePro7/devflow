@@ -39,5 +39,13 @@ if (-not $allOk) {
     }
 
     Write-Output ($output | ConvertTo-Json -Compress)
+} else {
+    # Phase 1 OK — always inject context so SKILL.md auto-triggers
+    $output = @{
+        hookSpecificOutput = @{
+            hookEventName = "SessionStart"
+            additionalContext = "devflow Phase 1 ready — beads + gitnexus + autoresearch initialized. devflow 3-phase orchestrator available."
+        }
+    }
+    Write-Output ($output | ConvertTo-Json -Compress)
 }
-# else: no output = all good, nothing injected

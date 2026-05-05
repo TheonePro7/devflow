@@ -1,6 +1,6 @@
 ---
 name: devflow
-description: devflow Phase 1 pending — beads/gitnexus not initialized. SKILL: 3-PHASE ORCHESTRATOR (Setup → Develop → Finish). Wraps superpowers with beads + gitnexus + autoresearch. Use when hook reports Phase 1 pending or user invokes /devflow.
+description: devflow 3-phase development orchestrator (Setup → Develop → Finish). Wraps superpowers with beads + gitnexus + autoresearch. Auto-triggers on session start — Phase 1 pending triggers setup flow, Phase 1 ready enables the full pipeline.
 ---
 
 # devflow — Development Orchestrator

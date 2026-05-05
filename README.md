@@ -6,7 +6,7 @@
 
 devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到成品**，覆盖 5 个阶段：创意梳理（Phase 0）→ 前端设计（Phase 0.5）→ 项目初始化（Phase 1）→ 开发循环（Phase 2）→ 会话收尾（Phase 3）。
 
-包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自动优化**（4 个自动门）、**screenshot-to-code 前端生成**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
+包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**（通过 Docker 运行，绕过 Windows tree-sitter 兼容性问题）、**autoresearch 自动优化**（4 个自动门）、**screenshot-to-code 前端生成**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
 
 即使没有技术背景，也可以从一个模糊的想法开始，经过结构化引导，最终落地为可交付的产品。
 
@@ -218,7 +218,7 @@ bash setup.sh
 |------|------|----------|
 | 1 | 检查 bd + gitnexus 是否安装 | 缺失则退出，提示安装命令 |
 | 2 | `bd init` 初始化 beads 仓库 | 已初始化则忽略 |
-| 3 | `gitnexus analyze . --force` 构建代码图谱 | 提示手动重试 |
+| 3 | `bash scripts/gitnexus-docker.sh analyze --force` 构建代码图谱（通过 Docker，绕过 Windows SIGSEGV） | 提示安装 Docker Desktop 后重试 |
 | 4 | 创建 `docs/CONTEXT.md`（如果不存在） | 已有则跳过 |
 | 5 | 创建 `docs/adr/` + README.md（如果不存在） | 已有则跳过 |
 | 6 | 创建 `docs/tdd/` 目录（如果不存在） | 已有则跳过 |
@@ -369,10 +369,11 @@ beads:
   - 作用: 将特性创建为可追踪的一级 issue，后续子任务可以挂载
 
 gitnexus:
-  - 命令: gitnexus context <key-symbol>
+  - 命令: bash scripts/gitnexus-docker.sh context <key-symbol>
   - 作用: 预取相关代码的上下文（类型定义、接口、调用链），
           喂给 brainstorming 子 agent，避免其在缺乏代码知识
           的情况下做设计
+  - 注意: 需要 Docker Desktop 运行；docker 不可用时跳过（非致命）
 
 context:
   - 加载 docs/CONTEXT.md，让子 agent 了解领域词汇
@@ -421,8 +422,9 @@ beads:
   - 任务 ID 层级化: bd-xxx.1, bd-xxx.1.1, ...
 
 gitnexus:
-  - gitnexus impact <symbol> --depth 2
+  - bash scripts/gitnexus-docker.sh impact <symbol> --depth 2
   - 分析变更的"爆炸半径"（影响范围），注入计划上下文
+  - 注意: 需要 Docker Desktop 运行；docker 不可用时跳过（非致命）
 
 auto-split (PRD→beads):
   - 如果设计文档包含 "## Task:" 标题，自动运行:
@@ -461,8 +463,10 @@ auto-split (PRD→beads):
 
 ```yaml
 gitnexus:
-  - 主 agent 预取 gitnexus context 传给 implementer/spec-reviewer/quality-reviewer
+  - 主 agent 预取 gitnexus context（通过 scripts/gitnexus-docker.sh）
+    传给 implementer/spec-reviewer/quality-reviewer
   - 子 agent 不直接运行 gitnexus（避免重复调用和权限问题）
+  - 需要 Docker Desktop 运行；docker 不可用时跳过（非致命）
 
 beads:
   - bd ready: 检查阻塞任务是否完成，防止在依赖未就绪时开始工作
@@ -991,7 +995,7 @@ bash setup.sh --fresh      # 全新安装
 
 ```bash
 bd version          # beads 可用
-gitnexus --version  # gitnexus 可用
+bash scripts/gitnexus-docker.sh status  # gitnexus 可用（需 Docker Desktop）
 ls .beads/          # Phase 1 已完成
 ls .gitnexus/       # gitnexus 索引已构建
 ```
@@ -1201,7 +1205,7 @@ bash ~/.claude/skills/devflow/install.sh
 |------|------|-------------------|
 | [obra/superpowers](https://github.com/obra/superpowers) | **核心管道** | 委托 brainstorming、writing-plans、subagent-dev、code-review、finish-branch |
 | [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 1 自动安装并初始化，Phase 2 创建/更新 issues，Phase 3 关闭 |
-| [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 自动安装并构建索引，Phase 2 提供 context/impact 给子 agent |
+| [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 自动构建索引（通过 Docker，绕过 Windows tree-sitter SIGSEGV），Phase 2 提供 context/impact 给子 agent |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git.ps1 + guardrails-git.sh; CONTEXT.md + ADR 模式 |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 2 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
 | [screenshot-to-code](https://github.com/abi/screenshot-to-code) | **前端生成** | Phase 0.5 可选集成：截图/Figma 设计稿 → 前端代码。按需安装 |

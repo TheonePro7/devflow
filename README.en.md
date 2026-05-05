@@ -4,7 +4,7 @@
 
 [中文版](README.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
-devflow is a full-lifecycle product orchestrator skill for [Claude Code](https://claude.ai/code). It guides users from raw idea (Phase 0) through product design (Phase 0.5) and wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline with **beads** (issue tracking), **gitnexus** (code knowledge graph), **autoresearch** (4 auto-gates), **screenshot-to-code** (frontend generation), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills). Even users without technical backgrounds can start from a vague idea and end with a shipped product.
+devflow is a full-lifecycle product orchestrator skill for [Claude Code](https://claude.ai/code). It guides users from raw idea (Phase 0) through product design (Phase 0.5) and wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline with **beads** (issue tracking), **gitnexus** (code knowledge graph — via Docker, bypassing Windows tree-sitter compatibility issues), **autoresearch** (4 auto-gates), **screenshot-to-code** (frontend generation), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills). Even users without technical backgrounds can start from a vague idea and end with a shipped product.
 
 ---
 
@@ -142,7 +142,7 @@ The plan-grill is a **mandatory human-in-the-loop gate** between brainstorming a
 
 1. **Vocabulary verification** — Check all design terms against CONTEXT.md glossary
 2. **ADR consistency** — Verify design doesn't conflict with past architecture decisions
-3. **Code fact checking** — Use `gitnexus context <symbol>` to verify referenced code exists
+3. **Code fact checking** — Use `bash scripts/gitnexus-docker.sh context <symbol>` to verify referenced code exists (requires Docker Desktop)
 4. **Dependency check** — Use `bd dep check` or `bd ready` to find unresolved blockers
 5. **Edge case invention** — Proactively identify uncovered scenarios
 6. **Output grill report** — Document term changes, blind spots found, and ADR alignment
@@ -250,9 +250,10 @@ bash scripts/prd-to-beads.sh -d docs/design.md -e "Feature Title"
 
 ### 4. Code Knowledge Graph (gitnexus)
 
-- `gitnexus context <symbol>` — Pre-fetch code context for sub-agents
-- `gitnexus impact <symbol> --depth 2` — Analyze change blast radius
+- `bash scripts/gitnexus-docker.sh context <symbol>` — Pre-fetch code context for sub-agents (requires Docker Desktop)
+- `bash scripts/gitnexus-docker.sh impact <symbol> --depth 2` — Analyze change blast radius
 - Automatically injected into brainstorming and implementation phases
+- Docker skip is non-fatal: if Docker is unavailable, gitnexus is gracefully skipped
 
 ### 5. Auto-Research Gates (autoresearch)
 
@@ -438,7 +439,7 @@ bash setup.sh --fresh    # clean install
 
 ```bash
 bd version          # beads works
-gitnexus --version  # gitnexus works
+bash scripts/gitnexus-docker.sh status  # gitnexus works (requires Docker Desktop)
 ls .beads/          # Phase 1 complete
 ls .gitnexus/       # code graph indexed
 ```
@@ -565,7 +566,7 @@ This project incorporates design patterns and concepts inspired by:
 |---------|------|-------------------|
 | [obra/superpowers](https://github.com/obra/superpowers) | Core pipeline | Delegates brainstorming, writing-plans, subagent-dev, code-review, finish-branch |
 | [beads](https://github.com/gastownhall/beads) | Task tracking | Auto-installed in Phase 1, creates/updates/closes issues |
-| [gitnexus](https://www.npmjs.com/package/gitnexus) | Code graph | Auto-installed in Phase 1, provides context/impact to sub-agents |
+| [gitnexus](https://www.npmjs.com/package/gitnexus) | Code graph | Auto-analyzed in Phase 1 (via Docker, bypassing Windows tree-sitter SIGSEGV), provides context/impact to sub-agents |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | Pattern source | Grill-with-docs → plan-grill; TDD docs; git guardrails; CONTEXT.md + ADR patterns |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | Auto-optimization | 4 automatic gates (probe → scenario → fix → security). ON by default |
 | [screenshot-to-code](https://github.com/abi/screenshot-to-code) | Frontend generation | Phase 0.5: convert screenshots/Figma to production code (optional) |

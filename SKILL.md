@@ -1,6 +1,6 @@
 ---
 name: devflow
-description: 3-PHASE DEVELOPMENT ORCHESTRATOR (Setup → Develop → Finish). Wraps superpowers 14-skill pipeline with beads task tracking + gitnexus code graph + autoresearch autonomous loop. Phase 1 auto-runs on project init, Phase 2 injects tools into superpowers flow.
+description: devflow Phase 1 pending — beads/gitnexus not initialized. SKILL: 3-PHASE ORCHESTRATOR (Setup → Develop → Finish). Wraps superpowers with beads + gitnexus + autoresearch. Use when hook reports Phase 1 pending or user invokes /devflow.
 ---
 
 # devflow — Development Orchestrator

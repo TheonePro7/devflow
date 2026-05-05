@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
+            "timeout": 10,
+            "shell": "powershell",
+            "statusMessage": "devflow: checking project state..."
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-writing-plans",
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-using-git-worktrees",
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-subagent-driven-development",
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-requesting-code-review",
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-finishing-a-development-branch",
+      "C:\\Users\\Administrator\\.claude\\skills\\superpowers-test-driven-development"
+    ]
+  }
+}

@@ -10,6 +10,9 @@ $ErrorActionPreference = "Stop"
 $passed = 0
 $failed = 0
 
+# Detect available PowerShell executable (pwsh on Linux/macOS, powershell on Windows)
+$script:psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+
 # Check which shells are available
 $bashAvailable = $false
 try {
@@ -28,7 +31,7 @@ function Test-Command {
     $json = "{`"tool_name`":`"Bash`",`"tool_input`":{`"command`":`"$Command`"}}"
 
     # Test PowerShell guardrails
-    $psResult = $json | powershell -NoProfile -File ".claude/hooks/guardrails-git.ps1" 2>$null
+    $psResult = $json | & $script:psExe -NoProfile -File ".claude/hooks/guardrails-git.ps1" 2>$null
     $psDenied = $psResult -match "permissionDecision.*deny"
     $psOk = ($Expected -eq "block" -and $psDenied) -or ($Expected -eq "allow" -and -not $psDenied)
 

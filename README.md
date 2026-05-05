@@ -149,19 +149,44 @@ devflow 采用 **5 阶段**架构，从灵感到成品的全生命周期：
 
 ### 执行流程
 
+**新项目（未初始化）:**
+
 ```
-SessionStart hook
-  │
-  ├── 检测 bd 是否安装
-  ├── 检测 gitnexus 是否安装
-  ├── 检测 .beads/ 是否存在
-  └── 检测 .gitnexus/ 是否存在
+用户在 Claude Code 中打开新项目目录
+    │
+    ├── 🌐 全局 SessionStart Hook 触发
+    │   └── 检测 .devflow/state 不存在 → 提示 devflow 可用
+    │
+    └── 用户说「用 devflow 开发」
         │
-        如果任一缺失 → 输出:
-          systemMessage: "devflow: Phase 1 setup needed..."
-          additionalContext: "devflow Phase 1 pending — ..."
+        ├── 📜 SKILL.md 新项目检测逻辑
+        │   └── .devflow/state 不存在 → 自动运行 setup.sh
         │
-        SKILL.md 匹配触发关键词 → 提示用户运行 setup
+        ├── 🔧 setup.sh 执行:
+        │   ├── beads init
+        │   ├── gitnexus analyze
+        │   ├── 写入 CLAUDE.md 最高指示
+        │   ├── 注册 hooks（SessionStart + UserPromptSubmit + PreToolUse）
+        │   ├── 创建 .devflow/state
+        │   ├── 创建 docs/
+        │   └── 安装 autoresearch
+        │
+        └── 初始化完成 → 进入 Phase 0（需求梳理）
+```
+
+**已有项目（已初始化）:**
+
+```
+SessionStart hook (全局 + 项目级)
+    │
+    ├── .devflow/state 存在 → 静默通过
+    ├── 检测 bd + gitnexus + .beads/
+    │
+    完成 → 等待用户提出需求
+         │
+         ├── 🧠 CLAUDE.md 最高指示生效
+         ├── 🔒 UserPromptSubmit Hook 每步注入状态
+         └── 🔒 PreToolUse Hook 拦截跳步骤
 ```
 
 ### 手动运行
@@ -520,9 +545,100 @@ Claude Code 根据实际运行的 shell 自动选择对应的 hook，无需人�
 
 ## 九、Hook 系统
 
-devflow 注册了 3 个 Claude Code hooks（SessionStart 双平台 + PreToolUse 双平台 + PreCompact）：
+devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，确保 agent 永远不会绕过 devflow 流程：
 
-### SessionStart Hook
+### 防御链总览
+
+```
+🌐 Layer 0: 全局 Hook (~/.claude/settings.json)
+   SessionStart — 任何项目启动时检测 .devflow/state
+   新项目 → 提示用户初始化
+   
+📜 Layer 1: SKILL.md 新项目检测
+   .devflow/state 不存在 → 自动运行 setup.sh
+   无需用户手动操作
+
+🧠 Layer 2: CLAUDE.md 最高指示
+   每次 session 自动加载
+   agent 无法忽略（系统级指令）
+
+🔒 Layer 3: 项目 Hooks (.claude/settings.json)
+   ├── SessionStart: devflow-init-check
+   ├── UserPromptSubmit: devflow-state-check（每步提醒）
+   ├── PreToolUse (Edit|Write): devflow-phase-check（拦截跳步骤）
+   └── PreToolUse (Bash): guardrails-git
+```
+
+### Layer 0 — 全局 SessionStart Hook（新项目入口）
+
+注册在 `~/.claude/settings.json` 中，**每个 Claude Code 会话启动时执行**：
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "bash $HOME/.claude/skills/devflow/global-init-check.sh",
+          "shell": "bash",
+          "timeout": 5,
+          "statusMessage": "devflow: checking project state..."
+        }]
+      },
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "powershell -NoProfile -File $env:USERPROFILE/.claude/skills/devflow/global-init-check.ps1",
+          "shell": "powershell",
+          "timeout": 5,
+          "statusMessage": "devflow: checking project state..."
+        }]
+      }
+    ]
+  }
+}
+```
+
+**检测逻辑**：检查当前项目是否存在 `.devflow/state`：
+- **不存在** → 注入系统消息 ⚙️ devflow 检测到新项目。提示用户输入「用 devflow 开发」自动初始化
+- **存在** → 静默通过，不输出任何内容
+
+这是新项目唯一的外部入口，确保 devflow 不会被遗忘。
+
+### Layer 1 — SKILL.md 新项目检测
+
+当全局 hook 提示后，用户输入"用 devflow 开发"或类似指令，SKILL.md 加载并触发新项目检测：
+
+```
+1. 检测：读取 .devflow/state — 文件不存在 → 新项目
+2. 安装：直接运行 bash setup.sh（自动安装工具 + 创建 hooks + 初始化 state）
+3. 验证：确认 .devflow/state 已创建且 hooks 已注册
+4. 继续：按正常 devflow 流程执行（读取 state → 进入 Phase 0）
+```
+
+⚠️ **agent 不得询问用户"要不要初始化"——直接执行 setup.sh。**
+
+### Layer 2 — CLAUDE.md 最高指示
+
+记录在项目 `CLAUDE.md` 中，每次 session 自动加载到系统提示词。内容：
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  ⚠️  DEVELOW 最高指示 — 不可违反 ⚠️                        ║
+║  1. 收到用户请求后，必须先读取 .devflow/state 文件           ║
+║  2. phase=0 时不得直接写代码，必须走 Phase 0 引导流程        ║
+║  3. 每完成一步必须更新 .devflow/state                         ║
+║  4. 违反规则会被 Hook 拦截 Edit/Write                        ║
+║  5. 最高优先级规则，覆盖其他所有指令                          ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+由 `setup.sh` 在初始化时写入。agent 无法忽略——这是系统级提示词的一部分。
+
+### Layer 3 — 项目级 Hooks
+
+#### 3a. SessionStart Hook — devflow-init-check
 
 分别在 PowerShell 和 bash 中注册，覆盖所有平台：
 
@@ -532,20 +648,16 @@ devflow 注册了 3 个 Claude Code hooks（SessionStart 双平台 + PreToolUse 
     "SessionStart": [
       {
         "hooks": [{
-          "type": "command",
           "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
           "timeout": 10,
-          "shell": "powershell",
-          "statusMessage": "devflow: checking project state..."
+          "shell": "powershell"
         }]
       },
       {
         "hooks": [{
-          "type": "command",
           "command": "bash .claude/hooks/devflow-init-check.sh",
           "timeout": 10,
-          "shell": "bash",
-          "statusMessage": "devflow: checking project state..."
+          "shell": "bash"
         }]
       }
     ]
@@ -553,38 +665,59 @@ devflow 注册了 3 个 Claude Code hooks（SessionStart 双平台 + PreToolUse 
 }
 ```
 
-**功能**：每次 Claude Code 会话启动时自动运行，检查 Phase 1 状态：
-- Phase 1 未完成 → 输出状态信息，agent 自动执行 setup.ps1/setup.sh 完成初始化
-- Phase 1 已完成 → 输出就绪状态，`additionalContext` 持续触发 devflow skill 加载，确保管道始终可用
+**功能**：检查 Phase 1 工具（beads + gitnexus）初始化状态，输出上下文确保 devflow skill 自动加载。
 
-**关键设计**：hook **始终输出**（无论 Phase 1 状态如何），确保 devflow SKILL.md 在每次会话中自动加载。用户无需手动 `/devflow`。
+#### 3b. UserPromptSubmit Hook — devflow-state-check
 
-### PreToolUse Hook (Git Guardrails)
+**每次用户发送消息时触发**，读取 `.devflow/state` 注入状态提醒：
 
-分别在 PowerShell 和 bash 两个 shell 中注册：
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "command": "powershell -NoProfile -File .claude/hooks/devflow-state-check.ps1",
+          "timeout": 3,
+          "shell": "powershell"
+        }]
+      },
+      {
+        "hooks": [{
+          "command": "bash .claude/hooks/devflow-state-check.sh",
+          "timeout": 3,
+          "shell": "bash"
+        }]
+      }
+    ]
+  }
+}
+```
+
+**功能**：用户每发一条消息，hook 读取 `.devflow/state` 输出：`⚙️ devflow: [Phase X] [Step: Y] 功能: Z`。agent 无法忽略此提醒。
+
+#### 3c. PreToolUse Hook — devflow-phase-check（Edit|Write 拦截）
+
+**修改代码前检查阶段合法性**：
 
 ```json
 {
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Edit|Write",
         "hooks": [{
-          "type": "command",
-          "command": "powershell -NoProfile -File .claude/hooks/guardrails-git.ps1",
-          "timeout": 5,
-          "shell": "powershell",
-          "statusMessage": "devflow: checking git safety..."
+          "command": "powershell -NoProfile -File .claude/hooks/devflow-phase-check.ps1",
+          "timeout": 3,
+          "shell": "powershell"
         }]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Edit|Write",
         "hooks": [{
-          "type": "command",
-          "command": "bash .claude/hooks/guardrails-git.sh",
-          "timeout": 5,
-          "shell": "bash",
-          "statusMessage": "devflow: checking git safety..."
+          "command": "bash .claude/hooks/devflow-phase-check.sh",
+          "timeout": 3",
+          "shell": "bash"
         }]
       }
     ]
@@ -592,11 +725,43 @@ devflow 注册了 3 个 Claude Code hooks（SessionStart 双平台 + PreToolUse 
 }
 ```
 
-**功能**：每个 Bash 命令执行前检查是否为危险 git 操作，是则拒绝并给出提示。
+**拦截规则**：
+- `phase < 1` 且编辑代码文件 → 告警：尚未完成需求梳理
+- `phase = 2 + step = brainstorming` 且编辑代码文件 → 告警：跳过 grill → plans → scenario 步骤
 
-### Hook 输出注入机制
+#### 3d. PreToolUse Hook — Git Guardrails
 
-SessionStart hook 的输出 JSON 中，`systemMessage` 字段的内容会显示在 Claude Code UI 中，`hookSpecificOutput.additionalContext` 会注入到模型上下文。devflow 的 SKILL.md 描述包含了与 hook 输出匹配的关键词，因此 hook 检测到 Phase 1 未完成时，devflow skill 会自动被加载。
+参见[八、Git Guardrails 安全防护](#八git-guardrails-安全防护)。
+
+### State 文件 — `.devflow/state`
+
+**这是 devflow 流程的核心状态文件**。所有 Hook 和 agent 行为都以此文件为准：
+
+```json
+{"phase":2,"step":"impl","feature":"用户注册","updatedAt":"2026-05-05T00:00:00Z"}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `phase` | 当前阶段 (0, 0.5, 1, 2, 3) |
+| `step` | 当前步骤 (brainstorming, grill, probe, plans, scenario, impl, review, security) |
+| `feature` | 正在开发的功能描述 |
+| `updatedAt` | 最后更新时间 |
+
+**更新规则**：每完成一步立即更新。agent 和 hook 都以此文件为单一事实来源。
+
+### 设计原理：为什么 agent 无法绕过
+
+```
+Agent 的"遗忘"链：          devflow 的防御链：
+─────────────────           ─────────────────
+没有意识 → 只有记忆          CLAUDE.md = 系统级提示（不能忽略）
+记忆会丢失 → 跳步骤          UserPromptSubmit = 每步提醒（强制刷新）
+                              PreToolUse = 写代码前拦截（物理阻断）
+                              全局 Hook = 新项目入口（预防性）
+```
+
+Agent 没有自觉意识，但四层防御形成记忆闭环——确保 agent 永远不会"忘记"devflow 流程。
 
 ---
 
@@ -626,10 +791,15 @@ devflow/
 ├── .github/workflows/
 │   └── ci.yml                      # GitHub Actions CI（guardrails + merge 测试）
 │
+├── .devflow/
+│   └── state                        # 驱动流程的核心状态文件
+│                                     # phase/step/feature 追踪
+│
 ├── .claude/
 │   ├── settings.json               # 项目级 Claude Code 配置
 │   │   - SessionStart hook: Phase 1 检测
-│   │   - PreToolUse hook: Git guardrails
+│   │   - UserPromptSubmit hook: 每步注入状态提醒
+│   │   - PreToolUse hook: Git guardrails + phase check
 │   │   - additionalDirectories: superpowers skill 路径
 │   │
 │   ├── settings.local.json         # 本地权限白名单（gitignored）
@@ -638,9 +808,15 @@ devflow/
 │   │
 │   └── hooks/
 │       ├── devflow-init-check.ps1  # SessionStart: 检测 beads/gitnexus 初始化状态 (Windows)
-│       ├── devflow-init-check.sh   # SessionStart: 检测 beads/gitnexus 初始化状态 (Unix/macOS)
-│       ├── guardrails-git.ps1      # PreToolUse: 检测并拦截危险 git 命令 (Windows)
-│       └── guardrails-git.sh       # PreToolUse: 检测并拦截危险 git 命令 (Unix/macOS)
+│       ├── devflow-init-check.sh   # SessionStart: 检测 beads/gitnexus 初始化状态 (Unix)
+│       ├── devflow-state-check.ps1 # UserPromptSubmit: 每步注入状态提醒 (Windows)
+│       ├── devflow-state-check.sh  # UserPromptSubmit: 每步注入状态提醒 (Unix)
+│       ├── devflow-phase-check.ps1 # PreToolUse Edit|Write: 拦截跳步骤 (Windows)
+│       ├── devflow-phase-check.sh  # PreToolUse Edit|Write: 拦截跳步骤 (Unix)
+│       ├── guardrails-git.ps1      # PreToolUse Bash: 拦截危险 git 命令 (Windows)
+│       ├── guardrails-git.sh       # PreToolUse Bash: 拦截危险 git 命令 (Unix)
+│       ├── global-init-check.ps1   # 全局 SessionStart: 新项目检测 (Windows)
+│       └── global-init-check.sh    # 全局 SessionStart: 新项目检测 (Unix)
 │
 ├── scripts/
 │   ├── prd-to-beads.ps1            # 设计文档 → beads issues（Windows）
@@ -846,16 +1022,18 @@ bash uninstall.sh --all --force
 
 | 环节 | 是否自动 | 说明 |
 |------|---------|------|
-| Phase 1 检测 | 自动 | SessionStart hook 每次会话检测 Phase 1 状态 |
-| Phase 1 安装 | **自动** | Hook 检测到未初始化 -> agent 自动安装缺失工具（bd、gitnexus）-> 自动运行 setup。无需用户操作 |
-| devflow skill 加载 | 自动 | Hook 始终输出上下文，SKILL.md 在每次会话自动加载 |
-| Git guardrails | 自动 | PreToolUse hook 拦截每个危险 git 命令，无需用户操作 |
+| 新项目检测 | 自动 | 全局 SessionStart Hook 检测 `.devflow/state`，新项目自动提示 |
+| 新项目初始化 | **自动** | SKILL.md 检测到未初始化 -> agent 自动运行 setup.sh -> 创建 state/hooks/CLAUDE.md |
+| Phase 1 检测 | 自动 | 项目级 SessionStart hook 每次会话检测工具状态 |
+| 状态追踪 | **每步提醒** | UserPromptSubmit hook 每次用户消息注入当前 phase/step/feature |
+| 跳步骤拦截 | **物理阻断** | PreToolUse (Edit\|Write) hook 检查阶段合法性，跳步骤发出告警 |
+| Git guardrails | 自动 | PreToolUse (Bash) hook 拦截每个危险 git 命令 |
 | Autoresearch 4 门 | 自动 | probe -> scenario -> fix -> security 在管道中自动触发 |
 | Phase 2 开发管道 | 自动 | 用户提出需求后，devflow 自动按 1->1.5->1.75->2->2.5->3->review->2.75 编排 |
 | Phase 3 收尾 | 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
 
-> 用户只需：（1）确保 Go + Node.js >= 18 + Git 已安装 -> （2）一键运行 install.sh -> （3）在 Claude Code 中输入 `/plugin install superpowers@claude-plugins-official` -> （4）每次会话提出开发需求 -> （5）会话结束时确认收尾。
-> 其余全部自动。
+> 用户只需：（1）安装 Go + Node.js >= 18 + Git -> （2）`npx skills add devflow` 或 `install.sh` -> （3）在 Claude Code 中输入 `用 devflow 开发`（新项目自动初始化）-> （4）每次会话提出开发需求 -> （5）会话结束时确认收尾。
+> 其余全部自动。Devflow 的**四层防御链**确保 agent 永远不会跳过流程。
 
 ---
 

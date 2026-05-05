@@ -32,3 +32,4 @@ What this means for the codebase, team, or roadmap.
 <!-- Add new ADRs below with sequential numbering -->
 
 - [0001-use-devflow-5-phase-orchestration.md](0001-use-devflow-5-phase-orchestration.md)
+- [0002-use-state-driven-enforcement.md](0002-use-state-driven-enforcement.md)

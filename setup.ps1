@@ -113,20 +113,20 @@ if (-not $ignoreGitnexus) {
             $gitnexusOk = $true
             Write-Host "[PASS] gitnexus index built (via Docker)" -ForegroundColor Green
         } else {
-            Write-Host "[WARN] gitnexus Docker analyze failed — falling back to native" -ForegroundColor Yellow
+            Write-Host "[WARN] gitnexus Docker analyze failed" -ForegroundColor Yellow
         }
+    } else {
+        Write-Host ""
+        Write-Host "[INFO] Docker Desktop not detected." -ForegroundColor Yellow
+        Write-Host "       gitnexus (code knowledge graph) requires Docker on Windows." -ForegroundColor Gray
+        Write-Host "       Install from: https://docs.docker.com/desktop/setup/install/windows-install/" -ForegroundColor Gray
+        Write-Host "       After install, re-run setup or run the helper directly:" -ForegroundColor Gray
+        Write-Host "       .\scripts\gitnexus-docker.ps1 analyze --force" -ForegroundColor Gray
+        Write-Host "       Skipping gitnexus for now — this is NON-FATAL." -ForegroundColor Gray
     }
 
-    if (-not $gitnexusOk) {
-        # Fall back to native (may SIGSEGV on Windows — non-fatal)
-        gitnexus analyze . --force 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            $gitnexusOk = $true
-            Write-Host "[PASS] gitnexus index built (native)" -ForegroundColor Green
-        } else {
-            Write-Host "[WARN] gitnexus analyze failed (exit code $LASTEXITCODE) — non-fatal" -ForegroundColor Yellow
-        }
-    }
+    # Native fallback removed — it always SIGSEGVs on Windows (Node 22 / tree-sitter).
+    # Docker is the only reliable path for gitnexus on this platform.
 }
 
 # ---- Step 4: Settings.json merge ----

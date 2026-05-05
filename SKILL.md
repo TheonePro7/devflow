@@ -262,6 +262,10 @@ Phase 2: Develop (session-level, each task)
 
   Background:    Git guardrails block dangerous commands
 
+  **gitnexus注:** 所有 gitnexus 命令依赖 Docker Desktop。
+  每个注入点先检查 `docker ps`，不可用时推荐安装；
+  用户拒绝 → 跳过 gitnexus（非致命，agent 照常工作）。
+
 Phase 3: Finish (project-level, per-session)
   ─────────────────────────────────────────
   beads close all session issues
@@ -493,11 +497,14 @@ Before `superpowers-brainstorming` runs:
 beads:
   - bd create --title="<feature>" --type=epic
 
-gitnexus (run via Docker — bypasses Windows SIGSEGV):
-  - Determine the core symbols/files this feature relates to
-  - Run: .\scripts\gitnexus-docker.ps1 context <核心符号>  (Windows)
-  - Run: bash scripts/gitnexus-docker.sh context <core-symbol>  (Unix)
-  - If no obvious symbol, use: gitnexus-docker query "<domain-term>"
+gitnexus (via Docker):
+  - First check: docker ps (if fails → recommend Docker Desktop install)
+  - If user declines Docker → skip gitnexus (non-fatal)
+  - If Docker available:
+    1. Determine the core symbols/files this feature relates to
+    2. Run: .\scripts\gitnexus-docker.ps1 context <核心符号>  (Windows)
+       or:  bash scripts/gitnexus-docker.sh context <core-symbol>  (Unix)
+    3. If no obvious symbol, use: gitnexus-docker query "<domain-term>"
 
 context:
   - Load docs/CONTEXT.md for domain vocabulary
@@ -514,9 +521,10 @@ After brainstorming, before writing plans:
 Process:
   1. Load CONTEXT.md — verify all terms are defined
   2. Load relevant ADRs — check for conflicts
-  3. gitnexus-docker impact — verify design doesn't break existing code
-     .\scripts\gitnexus-docker.ps1 impact <design-interface> --depth 2  (Windows)
-     bash scripts/gitnexus-docker.sh impact <design-interface> --depth 2  (Unix)
+  3. gitnexus impact (if Docker available):
+     - Check docker ps first; if not available, recommend install
+     - If user declines, skip (non-fatal)
+     - If available: .\scripts\gitnexus-docker.ps1 impact <design-interface> --depth 2
   4. beads dep check — ensure no blocked dependency
   5. Invent boundary cases the design doesn't address
   6. Output grill report to docs/superpowers/specs/
@@ -559,10 +567,10 @@ beads:
   - bd create --title="<task>" --parent=<epic_id> --type=task
   - bd dep add <task> <dependency>
 
-gitnexus (via Docker):
-  - For each interface/symbol that will be modified, check blast radius:
-    .\scripts\gitnexus-docker.ps1 impact <symbol> --depth 2  (Windows)
-    bash scripts/gitnexus-docker.sh impact <symbol> --depth 2  (Unix)
+gitnexus (if Docker available — else skip with recommendation):
+  - Check docker ps; if not available → "Install Docker Desktop for impact analysis"
+  - If user declines → skip (non-fatal)
+  - If available: .\scripts\gitnexus-docker.ps1 impact <symbol> --depth 2
   - Include affected areas in task descriptions
 
 auto-split (PRD→beads):
@@ -598,8 +606,10 @@ Output: scenario/{date}-{slug}/ with detailed test scenarios
 During `superpowers-subagent-driven-development`:
 
 ```yaml
-gitnexus (via Docker):
-  - Before dispatching each task, fetch context for the target function/file:
+gitnexus (if Docker available — else skip):
+  - Check docker ps first; if missing → offer Docker Desktop install
+  - If user declines → skip (non-fatal, subagents work without it)
+  - If available, before dispatching each task:
     .\scripts\gitnexus-docker.ps1 context <目标函数>  (Windows)
     bash scripts/gitnexus-docker.sh context <target-function>  (Unix)
   - Include gitnexus output in subagent prompt as additional context

@@ -118,19 +118,21 @@ else
       GITNEXUS_OK=true
       echo -e "${GREEN}[PASS] gitnexus index built (via Docker)${NC}"
     else
-      echo -e "${YELLOW}[WARN] gitnexus Docker analyze failed — falling back to native${NC}"
+      echo -e "${YELLOW}[WARN] gitnexus Docker analyze failed${NC}"
     fi
+  else
+    echo ""
+    echo -e "${YELLOW}[INFO] Docker not detected.${NC}"
+    echo -e "${GRAY}       gitnexus (code knowledge graph) requires Docker on this platform.${NC}"
+    echo -e "${GRAY}       Install from: https://docs.docker.com/desktop/setup/install/windows-install/${NC}"
+    echo -e "${GRAY}       or: https://docs.docker.com/engine/install/${NC}"
+    echo -e "${GRAY}       After install, re-run setup or use the helper:${NC}"
+    echo -e "${GRAY}       bash scripts/gitnexus-docker.sh analyze --force${NC}"
+    echo -e "${GRAY}       Skipping gitnexus for now — this is NON-FATAL.${NC}"
   fi
 
-  # Fall back to native if Docker unavailable or failed
-  if [ "$GITNEXUS_OK" != "true" ]; then
-    if npx gitnexus analyze . --force 2>/dev/null; then
-      GITNEXUS_OK=true
-      echo -e "${GREEN}[PASS] gitnexus index built (native)${NC}"
-    else
-      echo -e "${YELLOW}[WARN] gitnexus analyze failed (non-fatal)${NC}"
-    fi
-  fi
+  # Native fallback removed — tree-sitter native modules are unreliable
+  # on Windows (SIGSEGV with Node 22). Docker is the reliable path.
 fi
 
 # ---- Step 4: Settings.json merge ----

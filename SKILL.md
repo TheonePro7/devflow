@@ -101,29 +101,84 @@ Phase 0: Ideate (session-level, per-feature)
 
 Phase 0.5: Design (session-level, per-feature)
   ────────────────────────────────────────────
-  Goal: Produce a frontend design and code scaffold.
-  
-  1. From PRD → frontend architecture decisions:
-     - Tech stack (React/Vue/Svelte, Tailwind/CSS Modules)
-     - Component tree & page layout
-     - Design system & style guide
-  2. Generate frontend code:
-     - Option A: screenshot-to-code — convert screenshots,
-       mockups, or Figma designs into production frontend code
-       (HTML+Tailwind / React / Vue)
-     - Option B: dyad — prompt-to-UI generation from scratch
-       when no reference designs exist
-     - Option C: Claude direct generation — recommended for
-       most cases, Claude generates the frontend from PRD + spec
-  3. Output:
-     - Frontend project scaffold (components, pages, styles)
-     - API integration stubs
-     - Design assets or references
-  
-  If the user has no frontend background, default to Option C
-  (Claude direct generation) with a clear component plan.
-  screenshot-to-code is auto-installed when user provides
-  reference screenshots. dyad is on-demand only.
+  Goal: From PRD → production-grade frontend code.
+  Powered by Auto-Designer engine.
+
+  ┌──────────────────────────────────────────────┐
+  │  AUTO-DESIGNER                               │
+  │                                              │
+  │  1. Requirements Analysis (Claude-driven)    │
+  │     ├── Classify: landing/admin/social/...    │
+  │     ├── Match framework + design system       │
+  │     └── Score complexity (1-5 small, 6-15    │
+  │         medium, 16+ large)                   │
+  │                                              │
+  │  2. Complexity Router                        │
+  │     ├── Small  → Claude Direct (built-in)    │
+  │     ├── Medium → OpenUI (on-demand)          │
+  │     ├── Large  → bolt.diy (on-demand)        │
+  │     └── Screenshots → screenshot-to-code     │
+  │                                              │
+  │  3. Unified Post-Processor                   │
+  │     ├── Inject design tokens                 │
+  │     ├── Normalize project structure          │
+  │     └── Create beads dev tasks               │
+  └──────────────────────────────────────────────┘
+
+  Framework Matching (AUTOMATIC — no user choice needed):
+
+  | Project Type  | Default Framework              | Design System  |
+  |---------------|-------------------------------|----------------|
+  | landing       | Next.js + Tailwind             | Tailwind UI    |
+  | admin         | React + Ant Design             | Ant Design Pro |
+  | social        | Next.js + Tailwind             | shadcn/ui      |
+  | ecommerce     | Next.js + Tailwind             | shadcn/ui      |
+  | tool          | React + Tailwind               | shadcn/ui      |
+  | content       | Next.js + Tailwind + MDX       | Tailwind UI    |
+  | mobile        | React Native + NativeWind      | NativeWind     |
+
+  On-Demand Tool Install:
+  - OpenUI (22.3k⭐): `pip install openui` — when user confirms for medium projects
+  - bolt.diy (19.3k⭐): `git clone + npm install` — when user confirms for large projects
+  - screenshot-to-code (72.4k⭐): Docker — when user provides screenshots
+
+  **Default behavior (80% of projects):** Claude Direct — zero install, zero dependencies.
+  Agent generates the full frontend project inline using the design token templates below.
+
+  The agent MUST NOT ask "which framework do you want?" — analyze and decide automatically.
+  Only ask the user when complexity suggests an external tool might be needed.
+
+### Design Token Templates (for Claude Direct generation)
+
+When generating frontend code via Claude Direct, use these design tokens:
+
+**Color Palette Derivation:**
+```
+From brand color or default (#1677ff):
+  Primary:    brand → 50/100/200/300/400/500/600/700/800/900
+  Neutral:    gray scale
+  Success:    green (#52c41a)
+  Warning:    orange (#faad14)
+  Error:      red (#ff4d4f)
+  Info:       blue (#1677ff)
+```
+
+**Spacing Scale (Tailwind-compatible):**
+```
+px(1) → 0.5(2) → 1(4) → 2(8) → 3(12) → 4(16) → 5(20) → 6(24) → 8(32) → 10(40) → 12(48) → 16(64)
+```
+
+**Typography:**
+```
+Headings: Inter / Plus Jakarta Sans (weights: 600/700)
+Body:     Inter (weight: 400)
+Monospace: JetBrains Mono (for code blocks)
+```
+
+**Component Patterns (per framework):**
+- React + shadcn/ui: use <Card>, <Dialog>, <Table>, <Form> primitives
+- React + Ant Design: use <ProTable>, <ProForm>, <ProLayout>
+- Next.js: App Router, server components by default, client components only when needed
 
 Phase 1: Setup (project-level, one-time, FULLY AUTOMATIC)
   ────────────────────────────────────────────────────────

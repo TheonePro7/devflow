@@ -31,13 +31,18 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker pull "$IMAGE" >/dev/null
 fi
 
+# Docker on Windows: hidden files (.git) are not mounted by default
+# and non-root users can't write to Windows volume mounts. Always use
+# --skip-git and --user root to handle both Windows and Linux.
+DOCKER_BASE=(docker run --rm -v "$REPO:/repo" --user root --entrypoint sh "$IMAGE")
+
 case "$CMD" in
   analyze)
     FORCE=""
     for arg in "$@"; do
       [ "$arg" = "--force" ] && FORCE="--force"
     done
-    docker run --rm -v "$REPO:/repo" --entrypoint sh "$IMAGE" -c "$CLI analyze /repo $FORCE 2>&1"
+    "${DOCKER_BASE[@]}" -c "$CLI analyze /repo --skip-git $FORCE 2>&1"
     echo "[PASS] gitnexus analyze complete"
     ;;
   context)
@@ -45,8 +50,7 @@ case "$CMD" in
     [ -z "$SYMBOL" ] && echo "Usage: gitnexus-docker context <symbol> [--repo <name>]" >&2 && exit 1
     EXTRA=""
     [ "$#" -ge 3 ] && [ "$2" = "--repo" ] && EXTRA="--repo $3"
-    docker run --rm -v "$REPO:/repo" --entrypoint sh "$IMAGE" -c \
-      "$CLI analyze /repo --force 2>&1 | tail -1 && $CLI context $EXTRA $SYMBOL --repo /repo 2>&1"
+    "${DOCKER_BASE[@]}" -c "$CLI analyze /repo --skip-git --force 2>&1 | tail -1 && $CLI context $EXTRA $SYMBOL --repo /repo 2>&1"
     ;;
   impact)
     SYMBOL="${1:-}"
@@ -56,14 +60,12 @@ case "$CMD" in
     while [ "$#" -gt 0 ]; do
       [ "$1" = "--depth" ] && DEPTH="--depth $2" && shift 2
     done
-    docker run --rm -v "$REPO:/repo" --entrypoint sh "$IMAGE" -c \
-      "$CLI analyze /repo --force 2>&1 | tail -1 && $CLI impact $DEPTH $SYMBOL --repo /repo 2>&1"
+    "${DOCKER_BASE[@]}" -c "$CLI analyze /repo --skip-git --force 2>&1 | tail -1 && $CLI impact $DEPTH $SYMBOL --repo /repo 2>&1"
     ;;
   query)
     QUERY="$*"
     [ -z "$QUERY" ] && echo "Usage: gitnexus-docker query <search-text>" >&2 && exit 1
-    docker run --rm -v "$REPO:/repo" --entrypoint sh "$IMAGE" -c \
-      "$CLI analyze /repo --force 2>&1 | tail -1 && $CLI query --repo /repo '$QUERY' 2>&1"
+    "${DOCKER_BASE[@]}" -c "$CLI analyze /repo --skip-git --force 2>&1 | tail -1 && $CLI query --repo /repo '$QUERY' 2>&1"
     ;;
   status)
     if [ -f ".gitnexus/meta.json" ]; then

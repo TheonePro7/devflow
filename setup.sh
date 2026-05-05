@@ -113,8 +113,8 @@ else
     fi
     REPO="$(pwd)"
     CLI="node /app/gitnexus/dist/cli/index.js"
-    if docker run --rm -v "$REPO:/repo" --entrypoint sh "$IMAGE" -c \
-         "$CLI analyze /repo --force" 2>/dev/null; then
+    if docker run --rm -v "$REPO:/repo" --user root --entrypoint sh "$IMAGE" -c \
+         "$CLI analyze /repo --skip-git --force" 2>/dev/null; then
       GITNEXUS_OK=true
       echo -e "${GREEN}[PASS] gitnexus index built (via Docker)${NC}"
     else

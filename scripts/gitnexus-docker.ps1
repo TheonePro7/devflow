@@ -4,6 +4,8 @@
 .DESCRIPTION
     Wraps ghcr.io/abhigyanpatwari/gitnexus:latest so gitnexus analyze/context/impact
     run inside a Linux container where tree-sitter native modules work correctly.
+    Uses --user root and --skip-git to handle Docker on Windows limitations:
+    hidden files (.git) not mounted by default, non-root can't write to Windows volumes.
 .USAGE
     .\scripts\gitnexus-docker.ps1 analyze [--force]
     .\scripts\gitnexus-docker.ps1 context <symbol> [--repo <name>]
@@ -23,6 +25,7 @@ $ErrorActionPreference = "Stop"
 $Image = "ghcr.io/abhigyanpatwari/gitnexus:latest"
 $Repo = (Get-Location).Path
 $Cli = "node /app/gitnexus/dist/cli/index.js"
+$DockerBase = "docker run --rm -v ""${Repo}:/repo"" --user root --entrypoint sh $Image"
 
 # Check Docker is available
 try {
@@ -43,7 +46,7 @@ if ($LASTEXITCODE -ne 0) {
 switch ($Command.ToLower()) {
     "analyze" {
         $force = if ($Arguments -contains "--force") { "--force" } else { "" }
-        docker run --rm -v "${Repo}:/repo" --entrypoint "sh" $Image -c "$Cli analyze /repo $force 2>&1"
+        Invoke-Expression "$DockerBase -c ""$Cli analyze /repo --skip-git $force 2>&1"""
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[PASS] gitnexus analyze complete" -ForegroundColor Green
         } else {
@@ -52,25 +55,24 @@ switch ($Command.ToLower()) {
     }
     "context" {
         if ($Arguments.Count -eq 0) { Write-Host "Usage: gitnexus-docker context <symbol> [--repo <name>]" -ForegroundColor Yellow; exit 1 }
-        # Parse out --repo flag
         $symbol = $Arguments[0]
         $extraArgs = ""
         if ($Arguments -contains "--repo") {
             $idx = [array]::IndexOf($Arguments, "--repo")
             $extraArgs = "--repo $($Arguments[$idx+1])"
         }
-        docker run --rm -v "${Repo}:/repo" --entrypoint "sh" $Image -c "$Cli analyze /repo --force 2>&1 | tail -1 && $Cli context $extraArgs $symbol --repo /repo 2>&1"
+        Invoke-Expression "$DockerBase -c ""$Cli analyze /repo --skip-git --force 2>&1 | tail -1 && $Cli context $extraArgs $symbol --repo /repo 2>&1"""
     }
     "impact" {
         if ($Arguments.Count -eq 0) { Write-Host "Usage: gitnexus-docker impact <symbol> [--depth 2]" -ForegroundColor Yellow; exit 1 }
         $symbol = $Arguments[0]
         $depth = if ($Arguments -contains "--depth") { $idx = [array]::IndexOf($Arguments, "--depth"); "--depth $($Arguments[$idx+1])" } else { "" }
-        docker run --rm -v "${Repo}:/repo" --entrypoint "sh" $Image -c "$Cli analyze /repo --force 2>&1 | tail -1 && $Cli impact $depth $symbol --repo /repo 2>&1"
+        Invoke-Expression "$DockerBase -c ""$Cli analyze /repo --skip-git --force 2>&1 | tail -1 && $Cli impact $depth $symbol --repo /repo 2>&1"""
     }
     "query" {
         $query = $Arguments -join " "
         if ([string]::IsNullOrWhiteSpace($query)) { Write-Host "Usage: gitnexus-docker query <search-text>" -ForegroundColor Yellow; exit 1 }
-        docker run --rm -v "${Repo}:/repo" --entrypoint "sh" $Image -c "$Cli analyze /repo --force 2>&1 | tail -1 && $Cli query --repo /repo '$query' 2>&1"
+        Invoke-Expression "$DockerBase -c ""$Cli analyze /repo --skip-git --force 2>&1 | tail -1 && $Cli query --repo /repo '$query' 2>&1"""
     }
     "status" {
         if (Test-Path ".gitnexus/meta.json") {

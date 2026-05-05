@@ -5,6 +5,26 @@ description: devflow 5-phase product orchestrator (Ideate → Design → Setup �
 
 # devflow — Development Orchestrator
 
+## CRITICAL — State-Driven Execution (MANDATORY)
+
+**devflow 使用 `.devflow/state` 文件驱动流程，所有 agent 必须遵守以下规则：**
+
+```
+每次收到用户消息时:
+  1. 读取 .devflow/state — 了解当前阶段和步骤
+  2. 按 state 执行下一步，禁止跳步骤
+  3. 每完成一步 → 更新 state
+  4. 如果用户提出新想法但 state 显示 phase=0 → 必须走 Phase 0 引导
+```
+
+**三层强制执行机制（不可绕过）:**
+- **CLAUDE.md 最高指示** — 每次会话自动加载
+- **UserPromptSubmit Hook** — 每步提醒当前状态（agent 无法忽略）
+- **PreToolUse Hook (Edit|Write)** — 写代码前检查阶段，跳过步骤会告警
+
+**CLAUDE.md** 文件（每次 session 自动加载）和 **Hook 脚本**（每步触发）共同构成记忆闭环。
+Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不会"忘记"devflow 流程。
+
 ## Critical Rules
 
 1. **devflow does not reimplement superpowers phases.** Brainstorming, writing plans, git worktrees, subagent-driven-development, code review, and branch finishing are all delegated to `superpowers-*` skills.
@@ -145,6 +165,28 @@ Phase 3: Finish (project-level, per-session)
   beads close all session issues
   Report session summary
 ```
+
+## State File — `.devflow/state`
+
+**每次状态变化必须更新此文件。** 字段说明：
+
+| 字段 | 说明 | 取值示例 |
+|------|------|---------|
+| `phase` | 当前大阶段 | 0, 0.5, 1, 2, 3 |
+| `step` | 当前精确步骤 | brainstorming, grill, probe, plans, scenario, impl, review, security |
+| `feature` | 当前正在开发的功能 | "用户注册" |
+| `prd` | PRD 文件路径 | "docs/prd/user-registration.md" |
+| `blocker` | 阻塞原因（如有） | "等待设计稿" |
+| `updatedAt` | 最后更新时间 | "2026-05-05T12:00:00Z" |
+
+**更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
+
+**读取规则：** 收到用户消息后先读此文件，判断当前阶段再执行。如果 phase=0 且用户提新想法，走 Phase 0 引导流程。
+
+**Hook 强制执行：**
+- UserPromptSubmit：每步读取 state 注入提醒
+- PreToolUse (Edit|Write)：编辑代码前检查阶段合法性
+- 两个 Hook 都是自动触发，agent 无法绕过
 	
 ## Auto-Install Rules
 
@@ -438,12 +480,20 @@ devflow/
 ├── README.md
 ├── LICENSE
 ├── .gitignore
+├── .devflow/                    # State-driven execution
+│   └── state                    # Current phase/step/feature
 ├── .claude/
 │   ├── settings.json           # Project hooks
 │   ├── settings.local.json     # Local overrides (gitignored)
 │   └── hooks/
 │       ├── devflow-init-check.ps1
-│       └── guardrails-git.ps1
+│       ├── devflow-init-check.sh
+│       ├── devflow-state-check.ps1  # UserPromptSubmit hook
+│       ├── devflow-state-check.sh
+│       ├── devflow-phase-check.ps1  # PreToolUse Edit|Write
+│       ├── devflow-phase-check.sh
+│       ├── guardrails-git.ps1
+│       └── guardrails-git.sh
 ├── scripts/
 │   ├── prd-to-beads.ps1
 │   └── prd-to-beads.sh

@@ -153,6 +153,32 @@ if ((-not (Test-Path $guardrailsSh) -or -not $mergeMode) -and (Test-Path $devflo
     Write-Host "[SKIP] guardrails-git.sh not available" -ForegroundColor Yellow
 }
 
+# ---- Step 5.5: Create .devflow/ state directory ----
+Write-Host ""
+Write-Host "--- .devflow/ state directory ---" -ForegroundColor Yellow
+$devflowDir = ".devflow"
+if (-not (Test-Path $devflowDir)) {
+    $null = New-Item -ItemType Directory -Path $devflowDir -Force
+    Write-Host "[PASS] $devflowDir/ created" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] $devflowDir/ already exists" -ForegroundColor Yellow
+}
+$stateFile = Join-Path $devflowDir "state"
+if (-not (Test-Path $stateFile)) {
+    $initialState = @{
+        phase = 0
+        step = ""
+        feature = ""
+        prd = ""
+        blocker = ""
+        updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+    } | ConvertTo-Json -Compress
+    $initialState | Out-File $stateFile -Encoding utf8
+    Write-Host "[PASS] .devflow/state initialized" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] .devflow/state already exists" -ForegroundColor Yellow
+}
+
 # ---- Step 6: Seed docs/ with merge ----
 Write-Host ""
 Write-Host "--- seeding docs/ ---" -ForegroundColor Yellow

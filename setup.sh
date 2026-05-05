@@ -145,6 +145,24 @@ if [ ! -f .claude/hooks/guardrails-git.sh ] || [ "$FRESH" = true ]; then
   fi
 fi
 
+# ---- Step 5.5: Create .devflow/ state directory ----
+echo ""
+echo -e "${YELLOW}--- .devflow/ state directory ---${NC}"
+if [ ! -d .devflow ]; then
+  mkdir -p .devflow
+  echo -e "${GREEN}[PASS] .devflow/ created${NC}"
+else
+  echo -e "${YELLOW}[SKIP] .devflow/ already exists${NC}"
+fi
+if [ ! -f .devflow/state ]; then
+  cat > .devflow/state << 'STATE'
+{"phase":0,"step":"","feature":"","prd":"","blocker":"","updatedAt":"2026-05-05T00:00:00Z"}
+STATE
+  echo -e "${GREEN}[PASS] .devflow/state initialized${NC}"
+else
+  echo -e "${YELLOW}[SKIP] .devflow/state already exists${NC}"
+fi
+
 # ---- Step 6: Seed docs/ with merge ----
 echo ""
 echo -e "${YELLOW}--- seeding docs/ ---${NC}"

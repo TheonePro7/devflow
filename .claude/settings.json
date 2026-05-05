@@ -74,6 +74,30 @@
             "statusMessage": "devflow: checking git safety..."
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File .claude/hooks/devflow-phase-check.ps1",
+            "shell": "powershell",
+            "timeout": 3,
+            "statusMessage": "devflow: checking phase..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/devflow-phase-check.sh",
+            "shell": "bash",
+            "timeout": 3,
+            "statusMessage": "devflow: checking phase..."
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -105,6 +129,30 @@
           {
             "type": "command",
             "command": "bd prime"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File .claude/hooks/devflow-state-check.ps1",
+            "shell": "powershell",
+            "timeout": 3,
+            "statusMessage": "devflow: checking state..."
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/devflow-state-check.sh",
+            "shell": "bash",
+            "timeout": 3,
+            "statusMessage": "devflow: checking state..."
           }
         ]
       }

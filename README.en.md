@@ -153,24 +153,34 @@ The plan-grill is a **mandatory human-in-the-loop gate** between brainstorming a
 
 ### 0. Phase 0 — Ideate (Idea → PRD)
 
-Turn a vague idea into a structured product brief, no technical skills required:
+Turn a vague idea into a structured PRD through adaptive 4-stage discovery:
 
-```yaml
-How it works:
-  1. Share your raw idea in plain language
-  2. Claude asks structured questions:
-     - Target users & their needs
-     - Problem & pain points
-     - Existing solutions & gaps
-     - Success criteria & KPIs
-  3. Output: Product Requirements Document (docs/prd/)
-     - Product vision statement
-     - User personas (2-3 archetypes)
-     - Feature hypotheses (MoSCoW priority)
-     - Risks & constraints
-
-Who it's for: Anyone with an idea — no coding or design experience needed.
 ```
+Stage 1: Problem Discovery
+  ├── Pain point → current state → timing → competition
+  └── Output: Problem Statement
+
+Stage 2: Users & Scenarios
+  ├── Derive 2-3 persona archetypes
+  ├── Map scenarios and needs
+  └── Output: Personas + User Stories
+
+Stage 3: Feature Discovery (Divergent → Convergent)
+  ├── Brainstorm all possible features
+  ├── MoSCoW priority sorting + Deep Module check
+  └── Output: Prioritized feature list
+
+Stage 4: Constraints & Success
+  ├── Tech/timeline/platform/business constraints
+  ├── Success metrics (qualitative + quantitative)
+  └── Risk assessment
+
+Adaptive: Skips stages user already covered — only probes gaps.
+```
+
+Outputs structured JSON to `.devflow/prd-context.json`, then invokes **to-prd** skill to format the final PRD to both `docs/prd/` and GitHub Issues.
+
+**Who it's for:** Anyone with an idea — no coding or design experience needed.
 
 ### 0.5. Phase 0.5 — Design (PRD → Frontend)
 

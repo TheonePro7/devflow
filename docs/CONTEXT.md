@@ -7,7 +7,7 @@ devflow — Claude Code 全生命周期产品编排器。5 阶段（Ideate → D
 ## Domain Glossary
 
 ### Phase 0 (Ideate)
-产品创意梳理阶段。Claude 引导式结构化提问：目标用户、痛点、现有方案、成功标准。产出 PRD 到 docs/prd/。无需外部工具。
+产品创意梳理阶段。4 阶段自适应探索引擎（问题发现 → 用户场景 → 功能探索 → 约束与标准），探索完成后调用 `to-prd` 技能格式化输出 PRD 到 `docs/prd/` 和 GitHub Issues。自适应机制：已覆盖内容自动跳过。
 
 ### Phase 0.5 (Design)
 前端设计阶段。PRD → 前端脚手架。三种方式：Claude 直接生成（默认）、screenshot-to-code、dyad。

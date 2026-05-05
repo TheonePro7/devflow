@@ -73,7 +73,7 @@ bd close <id>         # Complete work
 ### 5-Phase Architecture
 
 devflow is itself built on the same 5-phase architecture it orchestrates:
-- **Phase 0** (Ideate): Claude-guided idea exploration → PRD (no external tools)
+- **Phase 0** (Ideate): 4-stage adaptive discovery → structured JSON → to-prd → PRD
 - **Phase 0.5** (Design): PRD → Frontend scaffold (screenshot-to-code optional)
 - **Phase 1** (Setup): `setup.ps1` / `setup.sh` — one-time project initialization
 - **Phase 2** (Develop): `SKILL.md` defines the pipeline with superpowers + autoresearch gates

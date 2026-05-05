@@ -1,10 +1,10 @@
 # devflow
 
-**Claude Code development workflow orchestrator — 3-phase (Setup → Develop → Finish) that enhances the superpowers pipeline with task tracking, code knowledge graph, and automated optimization gates.**
+**Claude Code product orchestrator — 5-phase (Ideate → Design → Setup → Develop → Finish) that turns raw ideas into shipped products with user-centric design and automated engineering pipeline.**
 
 [中文版](README.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
-devflow is a lightweight orchestrator skill for [Claude Code](https://claude.ai/code). It wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline and injects **beads** (issue tracking), **gitnexus** (code knowledge graph), **autoresearch** (4 auto-gates), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills).
+devflow is a full-lifecycle product orchestrator skill for [Claude Code](https://claude.ai/code). It guides users from raw idea (Phase 0) through product design (Phase 0.5) and wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline with **beads** (issue tracking), **gitnexus** (code knowledge graph), **autoresearch** (4 auto-gates), **screenshot-to-code** (frontend generation), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills). Even users without technical backgrounds can start from a vague idea and end with a shipped product.
 
 ---
 
@@ -44,33 +44,31 @@ The installer auto-detects your OS, checks prerequisites, clones devflow, runs s
 
 ## Architecture
 
-devflow uses a 3-phase architecture, each with clear responsibilities:
+devflow uses a **5-phase** architecture, from raw idea to shipped product:
 
 ```
                      devflow (orchestrator)
                             │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-        Phase 1         Phase 2         Phase 3
-        Setup           Develop         Finish
-                            │
-                    ┌───────┴───────┐
-                    │               │
-               superpowers      autoresearch
-               pipeline         auto-injected
-                                    │
-                           ┌────────┴────────┐
-                           │    │       │    │
-                          probe scenario fix security
+       ┌────────────────────┼────────────────────┐
+       ▼                    ▼                    ▼
+   Phase 0             Phase 0.5           Phase 1-3
+   Ideate              Design              Setup→Develop→Finish
+
+   Idea → PRD          PRD → Frontend      Full-stack dev
+       
+   Claude-guided       screenshot-to-code  superpowers pipeline
+   prompting           + dyad              + autoresearch gates
+   + user personas     + UI architecture   + git guardrails
 ```
 
 ### Design Principles
 
 | Principle | Description |
 |-----------|-------------|
+| **From idea to product** | Phase 0 helps non-technical users refine ideas; Phase 0.5 generates frontend design; Phase 1-3 deliver engineering |
 | **No reinvention** | devflow never reimplements what superpowers already does. Brainstorming, writing-plans, subagent-dev, code-review, finish-branch are all delegated to superpowers-* |
-| **Tool injection** | devflow's value is injecting beads, gitnexus, grill, etc. at defined points in the superpowers pipeline |
-| **Hard gates** | Phase 1 must complete before Phase 2. Plan-grill must pass before writing-plans |
+| **Tool injection** | devflow's value is injecting beads, gitnexus, grill, screenshot-to-code, etc. at defined points in the pipeline |
+| **Hard gates** | Phase 0 must complete before Phase 0.5. Phase 0.5 must complete before Phase 1. Plan-grill must pass before writing-plans |
 | **HITL first** | Grill cross-examination and Phase 3 reports require human confirmation |
 | **Secure by default** | Git guardrails block dangerous operations by default; overrides require explicit intent |
 
@@ -78,10 +76,24 @@ devflow uses a 3-phase architecture, each with clear responsibilities:
 
 ## Pipeline Overview
 
-Each development task follows this automated pipeline in Claude Code:
+Each project follows this lifecycle in Claude Code, from idea to shipped product:
 
 ```
-User requests a feature
+User shares an idea
+    │
+    ▼
+⓪ PHASE 0 — IDEATE (Claude-guided)
+   Structured questioning → personas → problem analysis
+   Output: PRD saved to docs/prd/
+    │
+    ▼
+⓪½ PHASE 0.5 — DESIGN (Claude-guided)
+   UI architecture → tech stack → component tree
+   Option: screenshot-to-code for design→code conversion
+   Output: Frontend scaffold + docs/ux/ design decisions
+    │
+    ▼
+User requests a feature (from PRD)
     │
     ▼
 ① superpowers-brainstorming
@@ -138,6 +150,46 @@ The plan-grill is a **mandatory human-in-the-loop gate** between brainstorming a
 ---
 
 ## Features
+
+### 0. Phase 0 — Ideate (Idea → PRD)
+
+Turn a vague idea into a structured product brief, no technical skills required:
+
+```yaml
+How it works:
+  1. Share your raw idea in plain language
+  2. Claude asks structured questions:
+     - Target users & their needs
+     - Problem & pain points
+     - Existing solutions & gaps
+     - Success criteria & KPIs
+  3. Output: Product Requirements Document (docs/prd/)
+     - Product vision statement
+     - User personas (2-3 archetypes)
+     - Feature hypotheses (MoSCoW priority)
+     - Risks & constraints
+
+Who it's for: Anyone with an idea — no coding or design experience needed.
+```
+
+### 0.5. Phase 0.5 — Design (PRD → Frontend)
+
+Generate professional frontend design from your PRD:
+
+```yaml
+Options:
+  - Claude direct generation (default): Works for most projects
+  - screenshot-to-code: Convert screenshots/Figma designs → code
+    (HTML+Tailwind / React / Vue / Bootstrap)
+  - dyad: Prompt-to-UI generation when no reference designs exist
+
+Output:
+  - Frontend project scaffold (components, pages, styles)
+  - UI architecture decisions documented in docs/ux/
+  - API integration stubs
+
+Who it's for: Non-designers who want good-looking UIs without hiring a frontend engineer.
+```
 
 ### 1. Zero-Friction Install
 
@@ -333,6 +385,8 @@ devflow/
 │
 ├── docs/
 │   ├── CONTEXT.md                 # Domain glossary (Ubiquitous Language)
+│   ├── prd/                       # Phase 0: Product Requirements Documents
+│   ├── ux/                        # Phase 0.5: UI/UX design decisions
 │   ├── adr/                       # Architecture Decision Records
 │   └── tdd/                       # TDD deep reference docs
 ```
@@ -393,6 +447,7 @@ This project incorporates design patterns and concepts inspired by:
 | [gitnexus](https://www.npmjs.com/package/gitnexus) | Code graph | Auto-installed in Phase 1, provides context/impact to sub-agents |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | Pattern source | Grill-with-docs → plan-grill; TDD docs; git guardrails; CONTEXT.md + ADR patterns |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | Auto-optimization | 4 automatic gates (probe → scenario → fix → security). ON by default |
+| [screenshot-to-code](https://github.com/abi/screenshot-to-code) | Frontend generation | Phase 0.5: convert screenshots/Figma to production code (optional) |
 
 ### What devflow doesn't do
 

@@ -1,60 +1,63 @@
 # devflow
 
-**Claude Code 开发工作流编排器 — 3 阶段（Setup → Develop → Finish）增强 superpowers 管道 + 4 个自动 autoresearch 优化门**
+**Claude Code 产品级编排器 — 5 阶段（Ideate → Design → Setup → Develop → Finish）从创意到落地，小白也能用的全流程产品开发**
 
 [English](README.en.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
-devflow 是一个轻量级 orchestrator skill，包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自动优化**（4 个自动门：probe → scenario → fix → security）、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**六大工具。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
+devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到成品**，覆盖 5 个阶段：创意梳理（Phase 0）→ 前端设计（Phase 0.5）→ 项目初始化（Phase 1）→ 开发循环（Phase 2）→ 会话收尾（Phase 3）。
+
+包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自动优化**（4 个自动门）、**screenshot-to-code 前端生成**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
+
+即使没有技术背景，也可以从一个模糊的想法开始，经过结构化引导，最终落地为可交付的产品。
 
 ---
 
 ## 目录
 
 - [一、核心架构](#一核心架构)
-- [二、Phase 1：项目初始化（Setup）](#二phase-1项目初始化setup)
-- [三、Phase 2：开发循环（Develop）](#三phase-2开发循环develop)
-- [四、Phase 3：会话收尾（Finish）](#四phase-3会话收尾finish)
-- [五、工具注入详解](#五工具注入详解)
-- [六、Git Guardrails 安全防护](#六git-guardrails-安全防护)
-- [七、Hook 系统](#七hook-系统)
-- [八、项目文件清单](#八项目文件清单)
-- [九、安装与初始化](#九安装与初始化)
-- [十、常见场景工作流](#十常见场景工作流)
-- [十一、FAQ 与故障排除](#十一faq-与故障排除)
-- [十二、与生态项目的关系](#十二与生态项目的关系)
+- [二、Phase 0：创意梳理（Ideate）](#二phase-0创意梳理ideate)
+- [三、Phase 0.5：前端设计（Design）](#三phase-05前端设计design)
+- [四、Phase 1：项目初始化（Setup）](#四phase-1项目初始化setup)
+- [五、Phase 2：开发循环（Develop）](#五phase-2开发循环develop)
+- [六、Phase 3：会话收尾（Finish）](#六phase-3会话收尾finish)
+- [七、工具注入详解](#七工具注入详解)
+- [八、Git Guardrails 安全防护](#八git-guardrails-安全防护)
+- [九、Hook 系统](#九hook-系统)
+- [十、项目文件清单](#十项目文件清单)
+- [十一、安装与初始化](#十一安装与初始化)
+- [十二、常见场景工作流](#十二常见场景工作流)
+- [十三、FAQ 与故障排除](#十三faq-与故障排除)
+- [十四、与生态项目的关系](#十四与生态项目的关系)
 
 ---
 
 ## 一、核心架构
 
-devflow 采用 3 阶段架构，每个阶段有明确的职责边界：
+devflow 采用 **5 阶段**架构，从灵感到成品的全生命周期：
 
 ```
                      devflow (orchestrator)
                             │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-        Phase 1         Phase 2         Phase 3
-        Setup           Develop         Finish
-                            │
-                    ┌───────┴───────┐
-                    │               │
-               superpowers      autoresearch
-               pipeline         auto-injected
-                                    │
-                           ┌────────┴────────┐
-                           │    │       │    │
-                          probe scenario fix security
-                           ①¾    ②½   ③   ②¾
+       ┌────────────────────┼────────────────────┐
+       ▼                    ▼                    ▼
+   Phase 0             Phase 0.5           Phase 1-3
+   Ideate              Design              Setup→Develop→Finish
+
+   Idea → PRD          PRD → Frontend      Full-stack dev
+
+   Claude 引导         screenshot-to-code  superpowers 管道
+   用户画像            + dyad              + autoresearch 门禁
+   + 问题分析          + UI 架构           + git guardrails
 ```
 
 ### 设计原则
 
 | 原则 | 说明 |
 |------|------|
+| **从灵感到产品** | Phase 0 帮助非技术用户梳理想法；Phase 0.5 生成前端设计；Phase 1-3 工程落地 |
 | **不重写 superpowers** | devflow 不做 superpowers 已做的事。Brainstorming、writing-plans、subagent-dev、code-review、finish-branch 全部委托给 superpowers-* |
-| **工具注入** | devflow 的价值在于在 superpowers 管道的定义点注入 beads、gitnexus、grill 等工具 |
-| **硬关卡** | Phase 1 未完成不能进入 Phase 2。Plan-grill 未通过不能进入 writing-plans |
+| **工具注入** | devflow 的价值在于在管道的定义点注入 beads、gitnexus、grill、screenshot-to-code 等工具 |
+| **硬关卡** | Phase 0 → Phase 0.5 → Phase 1 顺序执行。Plan-grill 未通过不能进入 writing-plans |
 | **HITL 优先** | Grill 拷问、Phase 3 报告需要人类确认。自动化不跳过判断 |
 | **安全默认** | Git guardrails 默认拦截危险操作，覆写需要显式意图 |
 
@@ -74,7 +77,73 @@ devflow 采用 3 阶段架构，每个阶段有明确的职责边界：
 
 ---
 
-## 二、Phase 1：项目初始化（Setup）
+## 二、Phase 0：创意梳理（Ideate）
+
+**面向人群**：有想法但不知道如何落地的用户。不需要编程或设计经验。
+
+### 发生了什么
+
+用户说出自己的想法，Claude 引导进行结构化探索：
+
+```yaml
+1. 用户分享原始想法/愿景
+2. Claude 引导回答以下问题:
+   - 解决什么问题？
+   - 目标用户是谁？
+   - 现有解决方案有哪些？
+   - 怎么衡量成功？
+3. 生成产品简报:
+   - 产品愿景陈述
+   - 用户画像（2-3 个典型用户）
+   - 功能假设（MoSCoW 优先级）
+   - 风险与约束分析
+4. 输出: PRD 保存到 docs/prd/
+```
+
+### 核心价值
+
+- **降低门槛**：不需要写需求文档，用自然语言描述即可
+- **结构化输出**：从模糊想法到可执行的 PRD
+- **无缝衔接**：PRD 直接喂给 Phase 0.5 做前端设计，或 Phase 2 做开发
+
+---
+
+## 三、Phase 0.5：前端设计（Design）
+
+**面向人群**：需要前端界面但不懂设计或前端开发的用户。
+
+### 发生了什么
+
+从 PRD 出发，生成前端设计和代码：
+
+```yaml
+1. 从 PRD 提取 UI 需求:
+   - 需要哪些页面/界面
+   - 关键用户流程与交互
+   - 数据展示需求
+2. 技术栈决策:
+   - 默认: HTML + Tailwind CSS（门槛最低）
+   - 推荐: React（适合 SPA）/ Vue / Svelte
+3. 生成前端支持:
+   - 方式 A: screenshot-to-code — 用户提供参考截图/设计稿
+     自动安装 → 截图转前端代码 (HTML+Tailwind/React/Vue)
+   - 方式 B: dyad — 从 prompt 直接生成 UI（无设计稿时）
+   - 方式 C: Claude 直接生成（默认推荐）
+4. 输出:
+   - 前端项目脚手架（组件、页面、样式）
+   - API 集成桩代码
+   - docs/ux/ 设计决策文档
+```
+
+### 核心价值
+
+- **不需要前端工程师**：Claude 或截图直接生成专业前端
+- **设计决策有记录**：所有 UI 架构决策保存在 docs/ux/
+- **灵活切换**：可以根据项目阶段选择不同生成方式
+
+---
+
+## 四、Phase 1：项目初始化（Setup）
 
 **触发条件**：SessionStart hook 检测到 `.beads/` 或 `.gitnexus/` 缺失。
 
@@ -132,7 +201,7 @@ docs/tdd/             # TDD 深度参考文档目录
 
 ---
 
-## 三、Phase 2：开发循环（Develop）
+## 五、Phase 2：开发循环（Develop）
 
 **每个开发任务的会话循环**。这是 devflow 的核心阶段。
 
@@ -235,7 +304,7 @@ Plan-grill 是 devflow 从 mattpocock/skills 的 `grill-with-docs` 借鉴的核�
 
 ---
 
-## 四、Phase 3：会话收尾（Finish）
+## 六、Phase 3：会话收尾（Finish）
 
 **每个开发会话结束时执行**。
 
@@ -252,7 +321,7 @@ Plan-grill 是 devflow 从 mattpocock/skills 的 `grill-with-docs` 借鉴的核�
 
 ---
 
-## 五、工具注入详解
+## 七、工具注入详解
 
 ### ① — Brainstorming 注入
 
@@ -405,7 +474,7 @@ autoresearch:fix — 每个任务完成后的零错误门:
 
 ---
 
-## 六、Git Guardrails 安全防护
+## 八、Git Guardrails 安全防护
 
 从 mattpocock/skills 的 `git-guardrails-claude-code` 借鉴。
 
@@ -449,7 +518,7 @@ Claude Code 根据实际运行的 shell 自动选择对应的 hook，无需人�
 
 ---
 
-## 七、Hook 系统
+## 九、Hook 系统
 
 devflow 注册了 3 个 Claude Code hooks（SessionStart 双平台 + PreToolUse 双平台 + PreCompact）：
 
@@ -531,14 +600,14 @@ SessionStart hook 的输出 JSON 中，`systemMessage` 字段的内容会显示�
 
 ---
 
-## 八、项目文件清单
+## 十、项目文件清单
 
 ```
 devflow/
 │
 ├── SKILL.md                        # Orchestrator 定义（核心）
-│                                     - 3 阶段架构描述
-│                                     - 5 个注入点的详细 YAML 配置
+│                                     - 5 阶段架构描述（Ideate → Design → Setup → Develop → Finish）
+│                                     - 7 个注入点的详细 YAML 配置（⓪ ⓪½ ① ①½ ①¾ ② ②½ ③ ②¾）
 │                                     - 设计规则和约束
 │
 ├── setup.ps1                       # Phase 1 安装脚本（Windows PowerShell）— 支持 --merge / --fresh
@@ -622,13 +691,22 @@ devflow/
     │   - 编码约定
     │   - 由 grill 环节和子 agent 使用
     │
+    ├── prd/                        # Phase 0: 产品需求文档
+    │   - 产品愿景与用户画像
+    │   - 功能假设（MoSCoW）
+    │   - 风险与约束分析
+    │
+    ├── ux/                         # Phase 0.5: UI/UX 设计决策
+    │   - 技术栈选择依据
+    │   - 组件树与页面布局
+    │   - API 集成定义
+    │
     ├── adr/
     │   ├── README.md               # ADR 索引和管理说明
-    │   └── 0001-use-devflow-3-phase-orchestration.md
-    │                                 # 第一条架构决策：采用 devflow 3 阶段编排
+    │   └── 0001-use-devflow-5-phase-orchestration.md
+    │                                 # 第一条架构决策：采用 devflow 5 阶段编排
     │
-    └── tdd/
-        ├── deep-modules.md          # 深层模块设计：隐藏复杂度
+    └── tdd/        ├── deep-modules.md          # 深层模块设计：隐藏复杂度
         ├── interface-design.md      # 接口设计：先写调用方
         ├── mocking.md               # Mock 原则：仅系统边界
         ├── refactoring.md           # 重构模式：一次一步
@@ -637,7 +715,7 @@ devflow/
 
 ---
 
-## 九、安装与初始化
+## 十一、安装与初始化
 
 ### 全新安装
 
@@ -781,7 +859,7 @@ bash uninstall.sh --all --force
 
 ---
 
-## 十、常见场景工作流
+## 十二、常见场景工作流
 
 ### 场景 1：启动新功能开发
 
@@ -884,7 +962,7 @@ Depends on: bd-x9k2.1
 
 ---
 
-## 十一、FAQ 与故障排除
+## 十三、FAQ 与故障排除
 
 ### Q: SessionStart hook 报错 "devflow Phase 1 pending"？
 
@@ -928,7 +1006,7 @@ bash ~/.claude/skills/devflow/install.sh
 
 ---
 
-## 十二、与生态项目的关系
+## 十四、与生态项目的关系
 
 | 项目 | 角色 | devflow 的使用方式 |
 |------|------|-------------------|
@@ -937,9 +1015,12 @@ bash ~/.claude/skills/devflow/install.sh
 | [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 自动安装并构建索引，Phase 2 提供 context/impact 给子 agent |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git.ps1 + guardrails-git.sh; CONTEXT.md + ADR 模式 |
 | [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 2 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
+| [screenshot-to-code](https://github.com/abi/screenshot-to-code) | **前端生成** | Phase 0.5 可选集成：截图/Figma 设计稿 → 前端代码。按需安装 |
 
 ### devflow 不做什么
 
+- 不替代 Phase 0 的创意引导（纯 Claude 对话式梳理）
+- 不强制使用截图转代码（Claude 直接生成前端是默认方式）
 - 不重新实现任何 superpowers 阶段
 - 不包含子 agent 提示模板（由 superpowers-subagent-driven-development 管理）
 - 不替代 CI/CD 系统

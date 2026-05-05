@@ -1,6 +1,6 @@
 ---
 name: devflow
-description: devflow 3-phase development orchestrator (Setup → Develop → Finish). Wraps superpowers with beads + gitnexus + autoresearch. Auto-triggers on session start — Phase 1 pending triggers setup flow, Phase 1 ready enables the full pipeline.
+description: devflow 5-phase product orchestrator (Ideate → Design → Setup → Develop → Finish). From raw idea to shipped product — wraps superpowers pipeline with beads + gitnexus + autoresearch + screenshot-to-code. Phase 0 (Ideate) and Phase 0.5 (Design) guide users without tech background; Phase 1-3 handle engineering.
 ---
 
 # devflow — Development Orchestrator
@@ -8,36 +8,81 @@ description: devflow 3-phase development orchestrator (Setup → Develop → Fin
 ## Critical Rules
 
 1. **devflow does not reimplement superpowers phases.** Brainstorming, writing plans, git worktrees, subagent-driven-development, code review, and branch finishing are all delegated to `superpowers-*` skills.
-2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, and **autoresearch auto-optimization** are injected at defined points.
-3. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
-4. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
-5. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
-6. **ALL tools are auto-installed.** Never ask the user to install anything. If a tool is missing, install it. See [Auto-Install Rules](#auto-install-rules) below.
+2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, autoresearch auto-optimization, and **screenshot-to-code frontend generation** are injected at defined points.
+3. **Phase 0 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 0 produces a PRD draft. Phase 0.5 (Design) follows — frontend architecture + UI generation before any backend code.
+4. **Phase 0/0.5 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude structures and drives the process. Hard gates (grill, autoresearch) apply from Phase 2 onward.
+5. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
+6. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
+7. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
+8. **ALL tools are auto-installed.** Never ask the user to install anything. If a tool is missing, install it. See [Auto-Install Rules](#auto-install-rules) below.
 
 ## Architecture
 
 ```
                      devflow (orchestrator)
                             │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-        Phase 1         Phase 2         Phase 3
-        Setup           Develop         Finish
-                            │
-                    ┌───────┴───────┐
-                    │               │
-               superpowers      autoresearch
-               pipeline         auto-injected
-                                    │
-                           ┌────────┴────────┐
-                           │    │       │    │
-                          probe scenario fix security
-                           ①¾    ②½   ③   ②¾
+       ┌────────────────────┼────────────────────┐
+       ▼                    ▼                    ▼
+   Phase 0             Phase 0.5           Phase 1-3
+   Ideate              Design              Setup→Develop→Finish
+
+   Idea → PRD          PRD → Frontend      Full-stack dev
+       
+   Claude-guided       screenshot-to-code  superpowers pipeline
+   prompting           + dyad              + autoresearch gates
+   + user personas     + UI architecture   + git guardrails
 ```
 
-## The 3 Phases
+### The 5 Phases
 
 ```
+Phase 0: Ideate (session-level, per-feature)
+  ────────────────────────────────────────
+  Goal: Turn a raw idea into a structured product brief.
+  
+  1. User shares raw idea/vision
+  2. Claude guides structured exploration:
+     - What problem are we solving?
+     - Who are the target users?
+     - What existing solutions exist?
+     - How do we measure success?
+  3. Generate product brief:
+     - Product vision statement
+     - User personas (2-3)
+     - Feature hypotheses (MoSCoW: Must/Should/Could/Won't)
+     - Risk & constraint analysis
+  4. Output: PRD draft saved to docs/prd/
+  
+  No external tools needed — everything happens through
+  Claude-guided conversation. Phase 0 ends with a PRD
+  that feeds into Phase 0.5 and Phase 2.
+
+Phase 0.5: Design (session-level, per-feature)
+  ────────────────────────────────────────────
+  Goal: Produce a frontend design and code scaffold.
+  
+  1. From PRD → frontend architecture decisions:
+     - Tech stack (React/Vue/Svelte, Tailwind/CSS Modules)
+     - Component tree & page layout
+     - Design system & style guide
+  2. Generate frontend code:
+     - Option A: screenshot-to-code — convert screenshots,
+       mockups, or Figma designs into production frontend code
+       (HTML+Tailwind / React / Vue)
+     - Option B: dyad — prompt-to-UI generation from scratch
+       when no reference designs exist
+     - Option C: Claude direct generation — recommended for
+       most cases, Claude generates the frontend from PRD + spec
+  3. Output:
+     - Frontend project scaffold (components, pages, styles)
+     - API integration stubs
+     - Design assets or references
+  
+  If the user has no frontend background, default to Option C
+  (Claude direct generation) with a clear component plan.
+  screenshot-to-code is auto-installed when user provides
+  reference screenshots. dyad is on-demand only.
+
 Phase 1: Setup (project-level, one-time, FULLY AUTOMATIC)
   ────────────────────────────────────────────────────────
   Auto-detect missing tools → auto-install (go install / npm -g)
@@ -105,6 +150,8 @@ Phase 3: Finish (project-level, per-session)
 
 **Rule: If a tool is missing → install it. Never ask the user.**
 
+### Phase 1 Tools (auto-install)
+
 When devflow detects Phase 1 is pending, follow this sequence:
 
 ### 1. Install CLI Tools (if missing)
@@ -136,7 +183,74 @@ The setup script handles: `bd init`, `gitnexus analyze`, seeding docs, installin
 - If `npm install -g` fails: try with `npx gitnexus` as fallback
 - Report all failures clearly and stop — do NOT silently proceed with missing tools
 
+### Phase 0.5 Tools (on-demand)
+
+These are NOT auto-installed during setup. Install only when the user explicitly needs them:
+
+| Tool | When to install | Install command | Check with |
+|------|----------------|----------------|------------|
+| **screenshot-to-code** | User has reference screenshots, mockups, or Figma designs they want to convert to frontend code | ```git clone https://github.com/abi/screenshot-to-code.git && cd screenshot-to-code && pip install -r requirements.txt && cd frontend && npm install``` | Check if `screenshot-to-code` directory exists and backend responds |
+
+Install only on explicit user request (e.g., "use screenshot-to-code to turn this design into code").
+screenshot-to-code is Python-based and requires a separate terminal/server process.
+
 ## Tool Injection Details
+
+### ⓪ — Phase 0 Ideate Injection
+
+When user shares a raw idea, guide them through structured exploration:
+
+```yaml
+Process:
+  1. Listen to the user's idea — do NOT jump to solutions
+  2. Ask clarifying questions:
+     - "Who is this for?" (target users)
+     - "What problem does it solve?" (pain point)
+     - "How is it solved today?" (existing alternatives)
+     - "What does success look like?" (KPIs)
+  3. Synthesize into product brief:
+     - Product vision (1-2 sentences)
+     - User personas (2-3 archetypes)
+     - Feature hypotheses (MoSCoW priority)
+     - Risks & constraints
+  4. Save PRD to docs/prd/<feature-slug>.md
+  5. Confirm with user before proceeding to Phase 0.5 or Phase 1
+
+Note: This is Claude-guided collaboration — no HITL gate needed.
+      The user can always redirect. End with a clear "ready to design?"
+```
+
+### ⓪½ — Phase 0.5 Design Injection
+
+After PRD is ready, before any backend code, generate frontend design:
+
+```yaml
+Process:
+  1. From PRD → extract UI requirements:
+     - Pages/screens needed
+     - Key user flows & interactions
+     - Data display requirements
+  2. Make tech stack decisions:
+     - Recommend based on project context (React for SPAs, etc.)
+     - Default: HTML + Tailwind CSS (lowest barrier)
+  3. Generate frontend architecture:
+     - Component tree
+     - Page layout blueprint
+     - State management pattern
+     - API integration points
+  4. Generate frontend code (choose strategy):
+     - User has screenshots → offer screenshot-to-code installation
+     - User has no designs → Claude generates directly
+     - User wants prompt-to-UI → offer dyad (npx dyad)
+  5. Output:
+     - Frontend scaffold (components, pages, styles)
+     - API integration stubs linked to backend spec
+     - docs/ux/<feature-slug>/ with design decisions
+
+Default: Claude generates the frontend directly using the chosen
+         tech stack. screenshot-to-code is for screenshot/Figma
+         conversion only.
+```
 
 ### ① — Brainstorming Injection
 
@@ -336,7 +450,9 @@ devflow/
 ├── docs/
 │   ├── CONTEXT.md
 │   ├── adr/
-│   └── tdd/
+│   ├── tdd/
+│   ├── prd/              # Phase 0: Product Requirements Documents
+│   └── ux/               # Phase 0.5: Design decisions & UI specs
 └── docs/superpowers/specs/
 ```
 
@@ -351,6 +467,7 @@ Users need only these base dependencies (devflow auto-installs everything else):
 - **Go** (for beads) — `winget install GoLang.Go 2.0` or https://go.dev/dl/
 - **Node.js ≥ 18** + **npm** (for gitnexus, autoresearch)
 - **Git**
+- **Python 3.7+** (optional, only for screenshot-to-code in Phase 0.5)
 
 Everything else — beads (bd), gitnexus, superpowers skills, autoresearch — is **auto-installed** by devflow during Phase 1. No manual npm install -g or go install needed.
 
@@ -377,6 +494,7 @@ When the user proposes a new task mid-pipeline (e.g., during implementation ③)
 
 | If the request is... | Then... |
 |----------------------|---------|
+| A brand new idea (Phase 0 entry) | **Start from Phase 0.** Guide idea exploration → PRD → Phase 0.5 (design) → Phase 1-3 pipeline. Do NOT skip to brainstorming. |
 | A small tweak within current scope (rename, minor UI adjust, error message) | Handle inline via current subagent — no re-entry |
 | A logical sub-task missed during writing-plans (e.g., "also need a validation layer") | Create a beads sub-task, run autoresearch:fix gate on it. Do NOT restart pipeline |
 | A genuinely new feature unrelated to current work | Record as beads issue, defer to next session. Do NOT interrupt current pipeline |
@@ -395,6 +513,19 @@ When the user proposes a new task mid-pipeline (e.g., during implementation ③)
                                        ├── ②½ scenario (re-generated)
                                        └── ③ implementation (continue)
                                               └── autoresearch:fix (re-run)
+```
+
+### Recovery Flow (New Idea During Session)
+
+```
+③ implementation in progress
+    │
+    ── user: "new idea" ──→ ⓪ Phase 0 (explore idea)
+                                │
+                                └── ⓪½ Phase 0.5 (design frontend if needed)
+                                       │
+                                       └── Previous work paused, new work begins
+                                              Phase 1-3 for the new feature
 ```
 
 **Key rule**: Do NOT silently restart the pipeline without telling the user. State the plan and confirm before abandoning in-progress work.

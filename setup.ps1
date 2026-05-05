@@ -8,6 +8,7 @@
     .\setup.ps1             # Merge mode (idempotent)
     .\setup.ps1 --fresh     # Fresh install (overwrite)
     .\setup.ps1 --skip-autoresearch
+    .\setup.ps1 -WithDesigner      # Also install optional UI generators
 #>
 
 param(
@@ -321,7 +322,12 @@ if ($SkipAutoresearch -or $env:DEVFLOW_NO_AUTORESEARCH -eq "1") {
 if ($WithDesigner) {
     Write-Host ""
     Write-Host "--- auto-designer generators ---" -ForegroundColor Yellow
+    Write-Host "  Installing optional UI generation tools..." -ForegroundColor Gray
     & ".\scripts\auto-designer.ps1" -Install openui 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [SKIP] OpenUI install skipped (install manually: pip install openui)" -ForegroundColor Yellow
+    }
+    Write-Host "[PASS] auto-designer generators ready" -ForegroundColor Green
 }
 
 # ---- Step 9: Superpowers check ----

@@ -11,6 +11,8 @@ param(
   [string]$Output = "."
 )
 
+$ErrorActionPreference = "Stop"
+
 function Show-Help {
   Write-Host @"
 Usage: .\auto-designer.ps1 [options]
@@ -28,7 +30,13 @@ Options:
 
 function Install-OpenUI {
   Write-Host "[devflow] Installing OpenUI..."
-  pip install openui 2>&1
+  $pipCmd = if (Get-Command pip -ErrorAction SilentlyContinue) { "pip" } elseif (Get-Command pip3 -ErrorAction SilentlyContinue) { "pip3" } else { $null }
+  if ($pipCmd) {
+    & $pipCmd install openui 2>&1
+  } else {
+    Write-Host "[devflow] Python/pip not found. Try: pip install openui" -ForegroundColor Yellow
+    exit 1
+  }
 }
 
 function Install-Bolt {

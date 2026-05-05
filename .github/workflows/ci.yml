@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq shellcheck 2>/dev/null
+          pip install yamllint 2>/dev/null || true
+
+      - name: Validate settings.json
+        run: |
+          echo "=== settings.json ==="
+          jq . .claude/settings.json > /dev/null && echo "[PASS] Valid JSON"
+
+      - name: Guardrails tests (bash)
+        run: |
+          echo "=== guardrails (bash) ==="
+          bash scripts/test-guardrails.sh
+
+      - name: Guardrails tests (PowerShell)
+        run: |
+          echo "=== guardrails (PowerShell) ==="
+          pwsh -NoProfile -File scripts/test-guardrails.ps1
+
+      - name: Merge tests (bash)
+        run: |
+          echo "=== merge tests (bash) ==="
+          bash scripts/test-merge.sh
+
+      - name: Merge tests (PowerShell)
+        run: |
+          echo "=== merge tests (PowerShell) ==="
+          pwsh -NoProfile -File scripts/test-merge.ps1
+
+      - name: SKILL.md smoke test
+        run: |
+          echo "=== SKILL.md structure check ==="
+          # Must contain 3-phase architecture
+          grep -q "Phase 1" SKILL.md && echo "[PASS] Phase 1 referenced"
+          grep -q "Phase 2" SKILL.md && echo "[PASS] Phase 2 referenced"
+          grep -q "Phase 3" SKILL.md && echo "[PASS] Phase 3 referenced"
+          # Must contain key injection points
+          grep -q "brainstorming" SKILL.md && echo "[PASS] Brainstorming referenced"
+          grep -q "grill" SKILL.md && echo "[PASS] Grill referenced"
+          grep -q "guardrails" SKILL.md && echo "[PASS] Guardrails referenced"
+          # Must reference superpowers
+          grep -q "superpowers" SKILL.md && echo "[PASS] Superpowers referenced"
+
+      - name: Bash script lint
+        run: |
+          echo "=== shellcheck ==="
+          find . -name "*.sh" -path "./scripts/*" -o -name "*.sh" -path "./.claude/hooks/*" | while read f; do
+            shellcheck -s bash "$f" && echo "[PASS] $f" || echo "[WARN] $f (not fatal)"
+          done
+
+      - name: Check for CRLF in bash scripts
+        run: |
+          echo "=== CRLF check ==="
+          find . -name "*.sh" -exec file {} \; | grep -i CRLF && echo "[FAIL] CRLF found in bash scripts" && exit 1 || echo "[PASS] No CRLF"

@@ -2,7 +2,7 @@
 
 **Claude Code development workflow orchestrator — 3-phase (Setup → Develop → Finish) that enhances the superpowers pipeline with task tracking, code knowledge graph, and automated optimization gates.**
 
-[中文版](README.md)
+[中文版](README.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
 devflow is a lightweight orchestrator skill for [Claude Code](https://claude.ai/code). It wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline and injects **beads** (issue tracking), **gitnexus** (code knowledge graph), **autoresearch** (4 auto-gates), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills).
 
@@ -305,8 +305,12 @@ devflow/
 ├── install.ps1 / install.sh        # One-command installer
 ├── uninstall.ps1 / uninstall.sh    # Tiered safety uninstall
 ├── README.md / README.en.md        # Documentation (CN / EN)
-├── CLAUDE.md                       # AI agent conventions
+├── AGENTS.md                       # AI agent shell tips
+├── CLAUDE.md                       # AI agent conventions + beads workflow
 ├── LICENSE                         # MIT License
+│
+├── .github/workflows/
+│   └── ci.yml                      # GitHub Actions CI (guardrails + merge tests)
 │
 ├── .claude/
 │   ├── settings.json               # Project Claude Code config

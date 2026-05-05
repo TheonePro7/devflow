@@ -2,7 +2,7 @@
 
 **Claude Code 开发工作流编排器 — 3 阶段（Setup → Develop → Finish）增强 superpowers 管道 + 4 个自动 autoresearch 优化门**
 
-[English](README.en.md)
+[English](README.en.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
 devflow 是一个轻量级 orchestrator skill，包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**、**autoresearch 自动优化**（4 个自动门：probe → scenario → fix → security）、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**六大工具。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
 
@@ -547,10 +547,15 @@ devflow/
 ├── install.sh                      # 一键安装器（Unix）：克隆 + 安装工具 + 运行 setup
 ├── uninstall.ps1                   # 分级安全卸载（Windows）：hooks/guardrails/skill/docs/beads/gitnexus
 ├── uninstall.sh                    # 分级安全卸载（Unix）：hooks/guardrails/skill/docs/beads/gitnexus
-├── README.md                       # 本文档
+├── README.md                       # 本文档（中文）
+├── README.en.md                    # English documentation
+├── AGENTS.md                       # AI agent shell tips
 ├── CLAUDE.md                       # devflow 项目开发约定（供 AI agent 使用）
 ├── LICENSE                         # MIT License
 ├── .gitignore                      # 排除 node_modules/ + settings.local.json
+│
+├── .github/workflows/
+│   └── ci.yml                      # GitHub Actions CI（guardrails + merge 测试）
 │
 ├── .claude/
 │   ├── settings.json               # 项目级 Claude Code 配置

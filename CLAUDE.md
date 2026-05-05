@@ -1,5 +1,7 @@
 # Project Instructions for AI Agents
 
+See [AGENTS.md](AGENTS.md) for non-interactive shell command tips.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 

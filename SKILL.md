@@ -339,26 +339,110 @@ screenshot-to-code is Python-based and requires a separate terminal/server proce
 
 ### ⓪ — Phase 0 Ideate Injection
 
-When user shares a raw idea, guide them through structured exploration:
+When user shares a raw idea, run the 4-stage adaptive discovery engine.
+Each stage auto-detects if the user has already covered that dimension.
+Only probe gaps. Never ask mechanical questions.
+
+**Important references before starting:**
+- Load docs/CONTEXT.md for domain vocabulary (if exists)
+- Check docs/adr/ for relevant past decisions
+- Create docs/prd/ directory if it doesn't exist
 
 ```yaml
-Process:
-  1. Listen to the user's idea — do NOT jump to solutions
-  2. Ask clarifying questions:
-     - "Who is this for?" (target users)
-     - "What problem does it solve?" (pain point)
-     - "How is it solved today?" (existing alternatives)
-     - "What does success look like?" (KPIs)
-  3. Synthesize into product brief:
-     - Product vision (1-2 sentences)
-     - User personas (2-3 archetypes)
-     - Feature hypotheses (MoSCoW priority)
-     - Risks & constraints
-  4. Save PRD to docs/prd/<feature-slug>.md
-  5. Confirm with user before proceeding to Phase 0.5 or Phase 1
+Process Overview:
+  Adaptive 4-stage discovery → structured JSON → to-prd output
+
+  Stage 1: Problem Discovery
+    Goal: Validate that this problem is worth solving.
+    Triggers (auto-detect, only ask if missing):
+      - Pain point: "What specific problem are we solving? Who feels it?"
+      - Current state: "How is this handled today?"
+      - Timing: "Why now? What changed?"
+      - Competition: "Are there existing solutions? What's missing?"
+    Output: Problem Statement (1-2 paragraphs)
+    Skip: If user already described all four dimensions → just confirm
+    Edge case: User vague → ask "Let me make sure I understand the problem..."
+    Edge case: User has strong opinions on implementation → "Let's park the 
+               implementation details for now. First I want to understand..."
+
+  Stage 2: Users & Scenarios
+    Goal: Identify who this is for and what they need.
+    Process:
+      1. Derive 2-3 persona archetypes from context (identity → need → pain)
+      2. Show to user: "Does this sound right?"
+      3. For each persona, generate 3-5 User Stories
+    User Story format (from to-prd):
+      As a <role>, I want <capability>, so that <benefit>
+    Example:
+      As a small shop owner, I want one-click product poster generation,
+      so that I can promote on social media without hiring a designer
+    Output: 2-3 Personas + 6-15 User Stories
+    Skip: If user already named target users → refine, don't re-ask
+    Edge case: User says "everyone" → help segment: "Who needs this most?"
+
+  Stage 3: Feature Discovery
+    Goal: From divergent brainstorm to prioritized scope.
+    Phase A — Divergent:
+      1. Ask: "What features do you envision for this?"
+      2. If user runs dry, suggest based on domain knowledge + competitors
+    Phase B — Convergent (MoSCoW):
+      - Must: core path, unusable without
+      - Should: important but has workaround
+      - Could: nice-to-have, only with extra resource
+      - Won't: explicitly defer to future
+    Deep Module check (from to-prd):
+      After listing features, look for one that encapsulates complexity
+      behind a simple interface — that's a deep module candidate.
+      Flag it: "I notice <feature> could be a deep module..."
+    Output: MoSCoW-sorted feature list, each Must/Should mapped to User Stories
+    Skip: If user has a clear feature list → go straight to MoSCoW sorting
+
+  Stage 4: Constraints & Success
+    Goal: Ensure the PRD is feasible and testable.
+    Scan systematically for gaps (only ask what's missing):
+      - Tech stack: Languages, frameworks, hosting?
+      - Timeline: When should this ship?
+      - Platform: Web / iOS / Android / all?
+      - Business: Compliance, security, auth model?
+      - Success (qual): What does "using it" look like?
+      - Success (quant): DAU, conversion rate, response time, coverage?
+      - Risks: Top 3 risks and mitigations?
+    ADR check: Scan docs/adr/ for decisions affecting this feature
+    Output: Constraints + Success Metrics + Risk matrix
+
+  Handoff — to-prd integration:
+    After all 4 stages complete:
+    1. Collect all outputs into structured JSON
+    2. Save to .devflow/prd-context.json:
+       {
+         "phase": 0,
+         "stage": "complete",
+         "outputs": {
+           "problemStatement": "<from Stage 1>",
+           "personas": [{"name":"...", "needs":"...", "painPoints":"..."}],
+           "userStories": ["As a ..., I want ..., so that ..."],
+           "featurePriority": {"must":["..."], "should":["..."], "could":["..."], "wont":["..."]},
+           "constraints": {"tech":"...", "timeline":"...", "platform":"...", "business":"..."},
+           "successMetrics": {"qualitative":"...", "quantitative":"..."},
+           "risks": [{"risk":"...", "mitigation":"..."}]
+         }
+       }
+    3. Confirm with user: "Ready to turn this into a formal PRD?"
+    4. Run: /to-prd (let to-prd format and publish)
+    5. Also save final PRD to docs/prd/<feature-slug>.md
+
+Edge Cases:
+  - User already has a full PRD: Skip Stages 1-3. Stage 4 validates
+    completeness, then directly hand off to to-prd.
+  - User changes mind mid-stream: Restart from Stage 1, but preserve
+    confirmed info. Don't re-ask settled questions.
+  - User is in a hurry: "Quick mode" — one question per stage,
+    only the most critical gap.
+  - No CONTEXT.md exists: Create it during Stage 2 with domain terms.
 
 Note: This is Claude-guided collaboration — no HITL gate needed.
-      The user can always redirect. End with a clear "ready to design?"
+      The user can always redirect. End each stage with confirmation.
+      End the full discovery with "Ready to turn this into a PRD?"
 ```
 
 ### ⓪½ — Phase 0.5 Design Injection

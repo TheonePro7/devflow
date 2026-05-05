@@ -43,3 +43,30 @@ Additionally, borrow proven patterns from mattpocock/skills:
 - Reduced prompt duplication (devflow owns orchestration, superpowers owns pipeline)
 - New projects need Phase 1 setup before dev sessions can start
 - Guardrails hook adds slight overhead to every Bash command (sync check)
+
+## Addendum 1: GitNexus SIGSEGV Exception (2026-05-05)
+
+Dogfooding revealed that `gitnexus analyze` segfaults (SIGSEGV, exit 139) on
+Windows/bash with Node 22 due to a tree-sitter native module crash. This is an
+upstream issue, not fixable from devflow.
+
+**Decision**: Phase 1 now supports "degraded" mode — if gitnexus analyze fails,
+the setup script continues with a warning. gitnexus code context will be
+unavailable to subagents until the index is built manually.
+
+**Workaround**: Run `gitnexus analyze . --force` in native PowerShell (not bash).
+
+**Status**: Exception accepted. Will be removed when upstream is fixed.
+
+## Addendum 2: beads Auto-Hook Behavior (2026-05-05)
+
+`bd init` automatically adds `bd prime` hooks to `.claude/settings.json`
+(PreCompact + SessionStart events). This is beads' expected behavior —
+`--skip-hooks` and `--skip-agents` flags exist to disable it.
+
+**Decision**: devflow does not prevent or override this. beads hooks and devflow
+hooks coexist. If users prefer no beads hooks, re-run with:
+  `bd init --skip-hooks --skip-agents`
+
+**Note**: `bd prime` pre-compact hook improves session persistence for beads data,
+which is complementary to devflow's Phase 3 close flow.

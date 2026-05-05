@@ -46,6 +46,12 @@ Phase 1: Setup (project-level, one-time)
   Runs from setup.ps1/setup.sh or auto-detects when
   .beads/ or .gitnexus/ is missing on session start.
 
+  Note: gitnexus analyze may fail on Windows/bash (known SIGSEGV
+  upstream issue with tree-sitter on Node 22). This is NON-FATAL.
+  Phase 1 completes in "degraded" mode — beads and docs are still
+  initialized. Fix later by running in native PowerShell:
+    gitnexus analyze . --force
+
   Creates:
   - docs/CONTEXT.md    (domain vocabulary template)
   - docs/adr/          (architecture decision records)

@@ -32,6 +32,8 @@ fi
 
 echo -e "${GREEN}[PASS] Prerequisites: beads + gitnexus${NC}"
 
+GITNEXUS_OK=false
+
 # ---- Step 2: Init beads ----
 echo ""
 echo -e "${YELLOW}--- beads init ---${NC}"
@@ -45,9 +47,13 @@ fi
 echo ""
 echo -e "${YELLOW}--- gitnexus analyze ---${NC}"
 if npx gitnexus analyze . --force 2>&1; then
+    GITNEXUS_OK=true
     echo -e "${GREEN}[PASS] gitnexus index built${NC}"
 else
-    echo -e "${RED}[FAIL] gitnexus analyze failed — run 'npx gitnexus analyze . --force' manually${NC}"
+    GITNEXUS_OK=false
+    echo -e "${YELLOW}[WARN] gitnexus analyze failed (non-fatal)${NC}"
+    echo -e "${YELLOW}       Phase 1 continues in degraded mode.${NC}"
+    echo -e "${YELLOW}       Workaround: run in native PowerShell: gitnexus analyze . --force${NC}"
 fi
 
 # ---- Step 4: Seed docs/CONTEXT.md (if not exists) ----
@@ -103,7 +109,12 @@ fi
 # ---- Step 8: Summary ----
 echo ""
 echo -e "${CYAN}=== devflow ready ===${NC}"
-echo -e "${GRAY}  phase 1:  beads + gitnexus + docs seeded + guardrails${NC}"
+if [ "$GITNEXUS_OK" = "true" ]; then
+    echo -e "${GRAY}  phase 1:  beads + gitnexus + docs seeded + guardrails${NC}"
+else
+    echo -e "${YELLOW}  phase 1:  beads + docs seeded + guardrails (gitnexus: DEGRADED)${NC}"
+    echo -e "${GRAY}            fix: run 'gitnexus analyze . --force' in native PowerShell${NC}"
+fi
 echo -e "${GRAY}  phase 2:  superpowers-* pipeline + grill + tool injection${NC}"
 echo -e "${GRAY}  on-demand: /autoresearch (if installed)${NC}"
 echo ""

@@ -29,6 +29,9 @@ if ($missing.Count -gt 0) {
 
 Write-Host "[PASS] Prerequisites: beads + gitnexus" -ForegroundColor Green
 
+# Track overall status
+$gitnexusOk = $false
+
 # ---- Step 2: Init beads ----
 Write-Host ""
 Write-Host "--- beads init ---" -ForegroundColor Yellow
@@ -42,11 +45,20 @@ if ($LASTEXITCODE -eq 0) {
 # ---- Step 3: GitNexus analyze ----
 Write-Host ""
 Write-Host "--- gitnexus analyze ---" -ForegroundColor Yellow
+$gitnexusResult = 0
 gitnexus analyze . --force 2>&1
-if ($LASTEXITCODE -eq 0) {
+$gitnexusResult = $LASTEXITCODE
+if ($gitnexusResult -eq 0) {
+    $gitnexusOk = $true
     Write-Host "[PASS] gitnexus index built" -ForegroundColor Green
 } else {
-    Write-Host "[FAIL] gitnexus analyze failed — run 'npx gitnexus analyze . --force' manually" -ForegroundColor Red
+    Write-Host "[WARN] gitnexus analyze failed (exit code $gitnexusResult)" -ForegroundColor Yellow
+    Write-Host "       This is non-fatal — Phase 1 continues in degraded mode." -ForegroundColor Yellow
+    Write-Host "       gitnexus code context will be unavailable to subagents." -ForegroundColor Yellow
+    Write-Host "       Workarounds:" -ForegroundColor Yellow
+    Write-Host "       1. Try in native PowerShell (not bash): gitnexus analyze . --force" -ForegroundColor Gray
+    Write-Host "       2. On Windows/Node 22, SIGSEGV is a known upstream issue." -ForegroundColor Gray
+    Write-Host "       3. File an issue at https://github.com/nicepkg/gitnexus/issues" -ForegroundColor Gray
 }
 
 # ---- Step 4: Seed docs/CONTEXT.md (if not exists) ----
@@ -107,7 +119,12 @@ if (-not (Test-Path $guardrailsHook)) {
 # ---- Step 8: Summary ----
 Write-Host ""
 Write-Host "=== devflow ready ===" -ForegroundColor Cyan
-Write-Host "  phase 1:  beads + gitnexus + docs seeded + guardrails" -ForegroundColor Gray
+if ($gitnexusOk) {
+    Write-Host "  phase 1:  beads + gitnexus + docs seeded + guardrails" -ForegroundColor Gray
+} else {
+    Write-Host "  phase 1:  beads + docs seeded + guardrails (gitnexus: DEGRADED)" -ForegroundColor Yellow
+    Write-Host "            fix: run 'gitnexus analyze . --force' in native PowerShell" -ForegroundColor Gray
+}
 Write-Host "  phase 2:  superpowers-* pipeline + grill + tool injection" -ForegroundColor Gray
 Write-Host "  on-demand: /autoresearch (if installed)" -ForegroundColor Gray
 Write-Host ""

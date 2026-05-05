@@ -5,6 +5,28 @@ description: devflow 5-phase product orchestrator (Ideate → Design → Setup �
 
 # devflow — Development Orchestrator
 
+## ⚠️ NEW PROJECT DETECTION — 最高优先级
+
+**如果 `.devflow/state` 不存在，说明项目尚未初始化。** 这是判断新项目的唯一标准。
+
+检测到新项目时，必须按以下顺序执行：
+
+```
+1. 检测：读取 .devflow/state — 文件不存在 → 新项目
+2. 安装：bash setup.sh（自动安装工具 + 创建 hooks + 初始化 state）
+   - Windows: bash ~/.claude/skills/devflow/setup.sh
+   - 注意：⚠️ 不要问用户"要不要初始化" — 直接执行
+3. 验证：确认 .devflow/state 已创建且 hooks 已注册
+4. 继续：按正常 devflow 流程执行（读取 state → 进入 Phase 0）
+```
+
+**为什么这是最高优先级：**
+- 三层强制机制（CLAUDE.md 最高指示 + hooks 拦截 + state 追踪）全部依赖 `setup.sh` 创建
+- 不初始化 → 没有 CLAUDE.md → 没有 hooks → 没有 state → agent 必然跳步骤
+- 这是 devflow 在新项目上落地的唯一入口，不可跳过
+
+**注意：** 即使项目已经有 `.claude/settings.json` 或 `.beads/`，只要没有 `.devflow/state`，仍然算未初始化完毕。必须跑完 setup 完整流程。
+
 ## CRITICAL — State-Driven Execution (MANDATORY)
 
 **devflow 使用 `.devflow/state` 文件驱动流程，所有 agent 必须遵守以下规则：**

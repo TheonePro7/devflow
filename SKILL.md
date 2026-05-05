@@ -277,6 +277,7 @@ Phase 3: Finish (project-level, per-session)
 | `prd` | PRD 文件路径 | "docs/prd/user-registration.md" |
 | `blocker` | 阻塞原因（如有） | "等待设计稿" |
 | `updatedAt` | 最后更新时间 | "2026-05-05T12:00:00Z" |
+| | **Phase 0 steps:** `problem` → `users` → `features` → `constraints` → `prd` |
 
 **更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
 

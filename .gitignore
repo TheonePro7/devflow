@@ -2,6 +2,9 @@
 node_modules/
 .claude/settings.local.json
 
+# Agent Memory MCP auto-generated config
+.claude/hooks.json
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

@@ -602,8 +602,13 @@ devflow/
 │   ├── test-guardrails.ps1         # Git guardrails 验证测试（24 用例）
 │   │                                 Run: powershell -File scripts/test-guardrails.ps1
 │   │
-│   └── test-guardrails.sh          # Git guardrails 验证测试（bash 版）
-│                                     Run: bash scripts/test-guardrails.sh
+│   ├── test-merge.ps1              # Merge 脚本验证测试（Windows）
+│   │                                 Run: powershell -File scripts/test-merge.ps1
+│   │
+│   └── test-merge.sh               # Merge 脚本验证测试（bash 版）
+│                                     Run: bash scripts/test-merge.sh
+│
+├── docs/
 │
 ├── docs/
 │   ├── CONTEXT.md                  # 领域词汇表（Ubiquitous Language）

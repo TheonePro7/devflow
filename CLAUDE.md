@@ -60,9 +60,16 @@ devflow is itself built on the same 3-phase architecture it orchestrates:
 
 - `SKILL.md` — Core orchestrator definition (the source of truth for pipeline behavior)
 - `setup.ps1` / `setup.sh` — Phase 1 setup scripts (must be kept in sync)
+- `install.ps1` / `install.sh` — One-command installers with proxy/offline support
+- `uninstall.ps1` / `uninstall.sh` — Tiered safety uninstall (3 tiers)
 - `.claude/settings.json` — Project hooks (SessionStart, PreToolUse, PreCompact)
 - `.claude/hooks/` — Hook scripts (devflow-init-check, guardrails-git)
 - `scripts/prd-to-beads.ps1` / `.sh` — PRD task auto-split
+- `scripts/merge-settings.{ps1,sh}` — settings.json merge w/ hook dedup
+- `scripts/merge-guardrails.{ps1,sh}` — guardrails pattern diff-and-append
+- `scripts/merge-gitignore.{ps1,sh}` — .gitignore exact-line merge
+- `scripts/merge-docs.{ps1,sh}` — CONTEXT.md + ADR + TDD merge
+- `scripts/check-superpowers.{ps1,sh}` — superpowers detection gate
 - `docs/` — Project documentation (CONTEXT.md, ADRs, TDD docs, specs)
 
 ### Guardrails
@@ -87,17 +94,28 @@ devflow is itself built on the same 3-phase architecture it orchestrates:
 
 ### Cross-Platform Parity
 
-- `setup.ps1` and `setup.sh` must implement the same 9 steps
+- `setup.ps1` and `setup.sh` must implement the same 10 steps
 - `guardrails-git.ps1` and `guardrails-git.sh` must block the same 12 patterns
 - `prd-to-beads.ps1` and `prd-to-beads.sh` must parse the same markdown format
+- `install.ps1` and `install.sh` must support the same flags (--offline, --skip-autoresearch)
+- `uninstall.ps1` and `uninstall.sh` must implement the same 3-tier safety model
+- All merge-* script pairs must implement the same merge strategy
 - When modifying any paired file, update both
 
 ### Build & Test
 
 ```bash
-# Validate hook JSON output:
-echo '{"tool_name":"Bash","tool_input":{"command":"git push --force"}}' | powershell -NoProfile -File .claude/hooks/guardrails-git.ps1
-echo '{"tool_name":"Bash","tool_input":{"command":"git push --force"}}' | bash .claude/hooks/guardrails-git.sh
+# Validate guardrails (24 tests):
+bash scripts/test-guardrails.sh
+powershell -File scripts/test-guardrails.ps1
+
+# Validate merge scripts (idempotency + correctness):
+bash scripts/test-merge.sh
+powershell -File scripts/test-merge.ps1
+
+# Validate merge idempotency (run twice — second should be no-op):
+bash scripts/merge-settings.sh .claude/settings.json
+bash scripts/merge-settings.sh .claude/settings.json
 
 # Validate settings JSON:
 jq . .claude/settings.json

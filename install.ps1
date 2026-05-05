@@ -138,9 +138,9 @@ if (Test-Path $setupScript) {
 Write-Host ""
 Write-Host "=== Install complete ===" -ForegroundColor Cyan
 Write-Host "  devflow installed at: $DevflowDir" -ForegroundColor Gray
-Write-Host "  To complete setup, open this project in Claude Code and:" -ForegroundColor Gray
-Write-Host "  1. Claude Code will auto-detect Phase 1 and finalize setup" -ForegroundColor Gray
-Write-Host "  2. If superpowers is missing, type: /plugin install superpowers@claude-plugins-official" -ForegroundColor Cyan
-Write-Host "  3. Start a development task — devflow guides the pipeline" -ForegroundColor Gray
+Write-Host "  Phase 1 setup is already complete." -ForegroundColor Gray
+Write-Host "  Open this project in Claude Code — SessionStart hook confirms readiness." -ForegroundColor Gray
+Write-Host "  If superpowers is missing, type: /plugin install superpowers@claude-plugins-official" -ForegroundColor Cyan
+Write-Host "  Start a development task — devflow guides the pipeline" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Happy coding!" -ForegroundColor Green

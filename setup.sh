@@ -7,6 +7,7 @@
 #   bash setup.sh              # Merge mode (idempotent)
 #   bash setup.sh --fresh      # Fresh install (overwrite)
 #   bash setup.sh --skip-autoresearch
+#   bash setup.sh --with-designer    # Also install optional UI generators
 
 set -euo pipefail
 
@@ -19,11 +20,13 @@ NC='\033[0m'
 
 FRESH=false
 SKIP_AUTORESEARCH=false
+WITH_DESIGNER=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --fresh) FRESH=true; shift ;;
     --skip-autoresearch) SKIP_AUTORESEARCH=true; shift ;;
+    --with-designer) WITH_DESIGNER=true; shift ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
@@ -269,6 +272,16 @@ else
     echo -e "${YELLOW}[WARN] autoresearch install failed${NC}"
     echo -e "${GRAY}       Run manually: npx skills add uditgoenka/autoresearch${NC}"
   fi
+fi
+
+# ---- Optional: Auto-Designer generators ----
+if [ "$WITH_DESIGNER" = true ]; then
+  echo ""
+  echo -e "${YELLOW}--- auto-designer generators ---${NC}"
+  echo -e "${GRAY}  Installing optional UI generation tools...${NC}"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  bash "$SCRIPT_DIR/scripts/auto-designer.sh" --install openui 2>/dev/null || echo -e "${YELLOW}  [SKIP] OpenUI install skipped (install manually: pip install openui)${NC}"
+  echo -e "${GREEN}[PASS] auto-designer generators ready${NC}"
 fi
 
 # ---- Step 9: Superpowers check ----

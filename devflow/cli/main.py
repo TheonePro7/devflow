@@ -1,0 +1,79 @@
+"""devflow CLI 入口 — 所有命令的路由。"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from devflow.cli.state_cmd import run_state
+from devflow.cli.transition_cmd import run_transition
+from devflow.cli.gate_cmd import run_gate
+from devflow.cli.task_cmd import run_task
+from devflow.cli.init_cmd import run_init
+
+
+def _setup_encoding():
+    """Windows 终端编码修复。"""
+    if sys.platform == "win32":
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
+
+def main(argv: list[str] | None = None):
+    """CLI 主入口。"""
+    _setup_encoding()
+    parser = argparse.ArgumentParser(
+        prog="devflow",
+        description="自主工程引擎 — 从模糊创意到可交付产品的 AI 工作流编排器",
+    )
+    parser.add_argument("--version", action="version", version="devflow 0.1.0")
+    parser.add_argument("--path", help="项目路径（默认当前目录）")
+
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+
+    # state
+    p_state = subparsers.add_parser("state", help="显示当前状态")
+    p_state.set_defaults(func=run_state)
+
+    # init
+    p_init = subparsers.add_parser("init", help="初始化 devflow 项目")
+    p_init.add_argument("--force", action="store_true", help="强制重新初始化")
+    p_init.add_argument("--skip-beads", action="store_true", help="跳过 beads 初始化")
+    p_init.set_defaults(func=run_init)
+
+    # transition
+    p_trans = subparsers.add_parser("transition", help="状态转移")
+    p_trans.add_argument("target", nargs="?", help="目标状态（如 phase-1/start）")
+    p_trans.add_argument("--dry-run", action="store_true", help="预览不执行")
+    p_trans.set_defaults(func=run_transition)
+
+    # gate
+    p_gate = subparsers.add_parser("gate", help="门禁管理")
+    p_gate.add_argument("action", choices=["check", "run-impact-analysis", "run-verification", "run-security", "close"],
+                        help="门禁操作")
+    p_gate.add_argument("task_id", help="beads task ID")
+    p_gate.set_defaults(func=run_gate)
+
+    # task
+    p_task = subparsers.add_parser("task", help="任务管理")
+    p_task.add_argument("action", choices=["create", "list", "show"])
+    p_task.add_argument("id_or_epic", nargs="?", help="task ID 或 epic ID")
+    p_task.set_defaults(func=run_task)
+
+    args = parser.parse_args(argv)
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    try:
+        args.func(args)
+    except Exception as e:
+        print(f"❌ 错误: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -16,3 +16,13 @@ node_modules/
 
 # GitNexus auto-generated skills (from hooks)
 .claude/skills/
+
+# Python bytecache
+__pycache__/
+*.pyc
+
+# Python egg info
+*.egg-info/
+
+# Devflow local state (not the code itself)
+.devflow/hooks-local/

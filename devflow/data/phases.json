@@ -1,0 +1,96 @@
+{
+  "phases": {
+    "phase-0": {
+      "name": "未初始化",
+      "next": "phase-1",
+      "conditions": [],
+      "auto_transition": true,
+      "description": "项目尚未初始化。运行 devflow init 开始。"
+    },
+    "phase-1": {
+      "name": "Ideate（需求梳理）",
+      "next": "phase-2",
+      "conditions": [
+        {
+          "id": "EPIC_EXISTS",
+          "description": "至少有一个 epic 已创建",
+          "hint": "运行 devflow transition phase-1/complete 前需要先完成需求梳理并创建 epic"
+        },
+        {
+          "id": "EPIC_HAS_ACCEPTANCE",
+          "description": "epic 有 acceptance 标准",
+          "hint": "PRD 需要包含可验收的成功标准"
+        },
+        {
+          "id": "EPIC_HAS_DESCRIPTION",
+          "description": "epic 有完整描述",
+          "hint": "PRD 需要包含完整的功能描述"
+        }
+      ],
+      "auto_transition": false,
+      "description": "需求梳理阶段。Agent 追问：目标用户、核心场景、痛点、竞品、成功标准。不问技术细节。"
+    },
+    "phase-2": {
+      "name": "Design（设计）",
+      "next": "phase-3",
+      "conditions": [
+        {
+          "id": "DECISION_EXISTS",
+          "description": "至少有一个设计决策已记录",
+          "hint": "需要记录技术选型、架构设计、UI 方案等决策"
+        }
+      ],
+      "auto_transition": false,
+      "description": "设计阶段。出技术方案、架构设计、UI 设计，记录决策到 beads。"
+    },
+    "phase-3": {
+      "name": "Setup（项目初始化）",
+      "next": "phase-4",
+      "conditions": [
+        {
+          "id": "TASKS_CREATED",
+          "description": "至少有一个 task 处于 ready 状态",
+          "hint": "需要将设计拆解为可执行的开发任务"
+        },
+        {
+          "id": "SETUP_SCRIPTS_RUN",
+          "description": "初始化脚本已执行",
+          "hint": "运行 devflow init 确保项目初始化完整"
+        }
+      ],
+      "auto_transition": true,
+      "description": "项目初始化。自动创建 beads tasks、配置 hooks、初始化 gitnexus。"
+    },
+    "phase-4": {
+      "name": "Develop（开发）",
+      "next": "phase-5",
+      "conditions": [
+        {
+          "id": "ALL_TASKS_CLOSED",
+          "description": "所有 task 均为 closed",
+          "hint": "还有未完成的开发任务"
+        }
+      ],
+      "loop": true,
+      "description": "开发循环。Agent 自主处理每个 task：查影响范围→实现→验证→关闭→下一个。"
+    },
+    "phase-5": {
+      "name": "Finish（收尾）",
+      "next": null,
+      "conditions": [
+        {
+          "id": "GIT_PUSHED",
+          "description": "代码已推送",
+          "hint": "运行 git push 推送所有变更"
+        }
+      ],
+      "auto_transition": false,
+      "description": "收尾阶段。更新 beads close、git push、报告摘要。"
+    }
+  },
+  "flow": {
+    "entry": "phase-0",
+    "terminal": "phase-5",
+    "phases_order": ["phase-0", "phase-1", "phase-2", "phase-3", "phase-4", "phase-5"]
+  }
+}

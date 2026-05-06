@@ -40,7 +40,31 @@
       "PowerShell(cd f:\\\\AI\\\\devflow; try { $c = Get-Content .claude\\\\settings.json -Raw -Encoding utf8; $null = [System.Text.Encoding]::UTF8.GetBytes\\($c\\); $obj = $c | ConvertFrom-Json; Write-Output \"settings.json: valid JSON ✅\" } catch { Write-Output \"settings.json: INVALID ❌ - $_\" })",
       "Bash(gh repo *)",
       "Bash(gh api *)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(Select-String -Pattern \"tree-sitter|tree_sitter|language|parse\")",
+      "Bash(pip install *)",
+      "Bash(devflow --help)",
+      "Bash(devflow state *)",
+      "Bash(devflow transition *)",
+      "Bash(devflow gate *)",
+      "Bash(devflow task *)",
+      "Bash(devflow init *)",
+      "Bash(devflow --version)",
+      "Bash(rm -rf \"f:\\\\AI\\\\devflow-test\")",
+      "Bash(mkdir -p \"f:\\\\AI\\\\devflow-test\")",
+      "Bash(python -c ' *)",
+      "Bash(devflow sync *)",
+      "WebFetch(domain:gastownhall.github.io)",
+      "Bash(go version *)",
+      "Bash(Get-Command bd.exe)",
+      "Bash(Select-Object -ExpandProperty Source)",
+      "Bash(npx --yes skills add uditgoenka/autoresearch --yes --claude)",
+      "Bash(python -m devflow.cli.main --help)",
+      "Bash(python -m devflow.cli.main state)",
+      "Bash(python -m devflow.cli.main sync)",
+      "Bash(python -m devflow.cli.main gate --help)",
+      "Bash(python -m devflow.cli.main task --help)",
+      "Bash(python -m devflow.cli.main transition --help)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
@@ -58,7 +82,8 @@
       "F:\\AI\\memory\\.claude",
       "F:\\AI\\WekSkill\\.claude",
       "F:\\AI\\cut\\.claude",
-      "F:\\AI\\note\\.claude"
+      "F:\\AI\\note\\.claude",
+      "f:\\AI"
     ]
   },
   "hooks": {
@@ -152,6 +177,30 @@
           {
             "type": "command",
             "command": "bd prime"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m agent_memory_mcp.cli recall",
+            "timeout": 15,
+            "statusMessage": "agent-memory: loading memories..."
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m agent_memory_mcp.cli summarize",
+            "timeout": 30,
+            "statusMessage": "agent-memory: saving session summary..."
           }
         ]
       }

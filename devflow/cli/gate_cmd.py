@@ -25,6 +25,7 @@ from devflow.engine.escalation import (
     mark_resolved,
 )
 from devflow.protocols.beads_adapter import BeadsAdapter
+from devflow.utils import detect_test_commands
 
 
 def run_gate(args: argparse.Namespace):
@@ -170,8 +171,7 @@ def _run_verification(adapter: BeadsAdapter, task_id: str, project_path: Path):
     from devflow.protocols.autoresearch_adapter import AutoresearchAdapter
     auto = AutoresearchAdapter(project_path)
 
-    # 尝试自动检测验证命令
-    commands = _detect_verification_commands(project_path)
+    commands = detect_test_commands(project_path)
     if not commands:
         print(f"\n  🔍 运行验证...")
         print(f"  ⚠️  未检测到已知的测试框架。")
@@ -205,28 +205,6 @@ def _run_verification(adapter: BeadsAdapter, task_id: str, project_path: Path):
             print(f"\n  {get_escalation_message(task_id, 'verification_evidence')}\n")
         sys.exit(1)
 
-
-def _detect_verification_commands(project_path: Path) -> list[str]:
-    """自动检测项目使用的测试框架。"""
-    commands = []
-
-    # 检查常见的测试框架配置文件
-    checks = [
-        (project_path / "package.json", ["npm test", "npm run test", "npx jest", "npx vitest run"]),
-        (project_path / "pytest.ini", ["python -m pytest"]),
-        (project_path / "pyproject.toml", ["python -m pytest", "pytest"]),
-        (project_path / "setup.cfg", ["python -m pytest"]),
-        (project_path / "go.mod", ["go test ./..."]),
-        (project_path / "Cargo.toml", ["cargo test"]),
-        (project_path / "Makefile", ["make test"]),
-    ]
-
-    for config_file, cmds in checks:
-        if config_file.exists():
-            commands.extend(cmds)
-            break
-
-    return commands
 
 
 def _run_security(adapter: BeadsAdapter, task_id: str, project_path: Path):

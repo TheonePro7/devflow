@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from devflow.protocols.beads_adapter import BeadsAdapter
+from devflow.utils import detect_test_commands
 
 
 def run_dev(args: argparse.Namespace):
@@ -108,7 +109,7 @@ def _finish_task(adapter: BeadsAdapter, task_id: str, project_path: Path):
     auto = AutoresearchAdapter(project_path)
     if auto.is_available():
         print(f"  🔍 运行验证...")
-        commands = _detect_test_commands(project_path)
+        commands = detect_test_commands(project_path)
         if commands:
             result = auto.run_verification(commands[0])
             if result.get("success") and result.get("passed"):
@@ -177,18 +178,5 @@ def _dev_status(adapter: BeadsAdapter, project_path: Path):
     print()
 
 
-def _detect_test_commands(project_path: Path) -> list[str]:
-    """自动检测测试命令。"""
-    checks = [
-        (project_path / "package.json", ["npm test", "npm run test"]),
-        (project_path / "pytest.ini", ["python -m pytest"]),
-        (project_path / "pyproject.toml", ["python -m pytest"]),
-        (project_path / "setup.cfg", ["python -m pytest"]),
-        (project_path / "go.mod", ["go test ./..."]),
-        (project_path / "Cargo.toml", ["cargo test"]),
-        (project_path / "Makefile", ["make test"]),
-    ]
-    for config_file, cmds in checks:
-        if config_file.exists():
-            return cmds
-    return []
+
+

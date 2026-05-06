@@ -12,6 +12,8 @@ from devflow.cli.gate_cmd import run_gate
 from devflow.cli.task_cmd import run_task
 from devflow.cli.init_cmd import run_init
 from devflow.cli.sync_cmd import run_sync
+from devflow.cli.ideate_cmd import run_ideate
+from devflow.cli.log_cmd import run_log
 
 
 def _setup_encoding():
@@ -64,6 +66,20 @@ def main(argv: list[str] | None = None):
     p_sync = subparsers.add_parser("sync", help="同步各工具状态到 beads")
     p_sync.add_argument("--path", help="项目路径（默认当前目录）")
     p_sync.set_defaults(func=run_sync)
+
+    # ideate
+    p_ideate = subparsers.add_parser("ideate", help="4 阶段需求梳理引导")
+    p_ideate.add_argument("--path", help="项目路径（默认当前目录）")
+    p_ideate.add_argument("--resume", action="store_true", help="从草稿继续")
+    p_ideate.add_argument("--force", action="store_true", help="强制重新回答")
+    p_ideate.set_defaults(func=run_ideate)
+
+    # log
+    p_log = subparsers.add_parser("log", help="显示状态转移时间线")
+    p_log.add_argument("--path", help="项目路径（默认当前目录）")
+    p_log.add_argument("--tail", type=int, default=0, help="只看最近 N 条")
+    p_log.add_argument("--json", action="store_true", help="JSON 格式输出")
+    p_log.set_defaults(func=run_log)
 
     # task
     p_task = subparsers.add_parser("task", help="任务管理")

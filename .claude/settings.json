@@ -83,7 +83,10 @@
       "Bash(where bd *)",
       "Bash(devflow)",
       "Bash(.\\\\.devflow\\\\tasks.json)",
-      "Bash(python -m pytest tests/ -v)"
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(devflow ideate *)",
+      "Bash(devflow log *)",
+      "Bash(rm -f .devflow/ideate.json)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",

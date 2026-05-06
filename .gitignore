@@ -30,3 +30,9 @@ skills-lock.json
 
 # Devflow local state (not the code itself)
 .devflow/hooks-local/
+.devflow/state.json
+.devflow/state.log
+.devflow/tasks.json
+.devflow/epics.json
+.devflow/ideate.json
+.devflow/decisions.json

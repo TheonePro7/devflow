@@ -102,7 +102,31 @@ mattpocock/skills       ⭐⭐✩✩✩    **严重**
 | **INTERFACE-DESIGN.md** 接口优先设计 | ✅ 有 | 复制到了 TDD docs |
 | **60,000 订阅者邮件列表** | N/A | 不是代码集成，但说明 mattpocock 的模式有广泛实战验证 |
 
-### 2.5 前端生成工具 — 缺了什么
+### 2.6 gitnexus — 缺了什么
+
+**当前 devflow 用法**: 只在 Phase 4 的 brainstorming 和 writing-plans 步骤提到"注入 gitnexus context/impact"，实际的 SKILL.md 中没有具体实现。
+
+**严重缺失**:
+
+| gitnexus 的能力 | devflow 有吗 | 问题 |
+|---|---|---|
+| **知识图谱索引** (`gitnexus analyze`) | ❌ | devflow 只在 setup 阶段跑一次，但代码变更后索引会过期 |
+| **符号 360 度视图** (`gitnexus context`) | ❌ | 只提到"注入"，没有规定在哪个步骤、什么条件下必须调用 |
+| **影响范围分析** (`gitnexus impact`) | ❌ | 同上，没有强制使用 |
+| **实时变更检测** (`gitnexus detect-changes`) | ❌ | 这个最适合 PreToolUse hook，但完全没有集成 |
+| **执行流搜索** (`gitnexus query`) | ❌ | agent 改代码时不会先查执行流确认安全 |
+| **MCP 原生集成** | ❌ | gitnexus 原生支持 MCP，devflow 没有用这个能力 |
+| **跨仓库影响分析** (`gitnexus group impact`) | ❌ | 完全不支持多仓库场景 |
+| **自动维基生成** (`gitnexus wiki`) | ❌ | 代码文档完全靠手写 |
+| **嵌入语义搜索** (`--embeddings`) | ❌ | 没有利用语义搜索能力 |
+| **契约注册表** (`group contracts`) | ❌ | 微服务间接口契约无追踪 |
+| **Pre-commit 变更检查** | ❌ | detect-changes 设计用途就是 pre-commit，devflow 不用 |
+
+**核心问题**: gitnexus 的灵魂是 **"为 AI Agent 构建代码上下文的中枢神经系统"**。一个 agent 要安全地修改代码，必须知道"改了这个符号会破坏什么"。没有 gitnexus，agent 就是在盲改——靠猜测来判断影响范围。devflow 把 gitnexus 降级成了"可选的代码搜索工具"，忽略了它应该是 **每次代码改动前不可跳过的安全检查**。
+
+### 2.7 综合问题：最高指示不落地
+
+除了各个项目的独立缺失外，还有一个跨领域的问题：**devflow 的 CLAUDE.md 最高指示说"必须做 X"，但 SKILL.md 和 hooks 没有 enforce X**。比如最高指示说"不得跳步骤"，但 PreToolUse hook 只对 Edit|Write 告警，不对 Bash 操作拦截——agent 完全可以用 Bash 写代码绕过。承诺和落地之间存在差距。
 
 **当前 devflow 用法**: Claude Direct（默认）+ OpenUI（6-15 页）+ bolt.diy（16+ 页）+ screenshot-to-code（有截图时）。
 
@@ -216,7 +240,49 @@ finishing-a-development-branch        → autoresearch security + optimize
 - 用 `/autoresearch:debug` 覆盖 devflow 缺失的调试能力
 - 用 `/autoresearch:fix` 替换 devflow 的 fix 门禁（更完整：有自动 rollback + 迭代）
 
-### 3.6 前端生成工具深度扩展
+### 3.7 gitnexus 深度整合 — "代码中枢神经系统"
+
+**现状**: devflow 只"提到"了 gitnexus，没有真正集成。
+
+**方案（5 个注入点，按执行顺序）**:
+
+```
+Phase 1 (Ideate):
+  └─ gitnexus analyze (首次索引) → 生成代码库全貌
+  └─ gitnexus wiki → 生成项目维基作为 PRD 参考
+
+Phase 3 (Setup):
+  └─ gitnexus analyze --force (重新索引) → 确保索引最新
+
+Phase 4 第①步 brainstorming:
+  └─ gitnexus context <相关符号> → 理解要改的代码的完整上下文
+  └─ beads 记录索引状态
+
+Phase 4 第③步 writing-plans:
+  └─ gitnexus impact <目标符号> --depth=2 → 评估改动影响范围
+  └─ 影响范围写入 beads issue 的 design 字段
+
+Phase 4 第④步 subagent-driven-development:
+  ├─ implementer 调用前: gitnexus context → 确认实现方案安全
+  ├─ spec-reviewer: gitnexus detect-changes → 验证实现覆盖了所有受影响路径
+  ├─ quality-reviewer: gitnexus impact --direction=upstream → 检查是否破坏了依赖者
+  └─ code-review: gitnexus impact 结果作为审查依据之一
+
+Phase 5 (收尾):
+  └─ gitnexus status → 确保索引未损坏
+  └─ 索引状态写入 beads issue
+```
+
+**关键技术决策**:
+
+1. **MCP 模式优先** — gitnexus 支持 MCP 协议，优于 CLI 调用。应在 `.claude/settings.json` 中注册 gitnexus MCP server，让 agent 通过 MCP 工具直接查询知识图谱，而不是通过 bash 调用 CLI。
+
+2. **detect-changes 集成到 PreToolUse hook** — 每次 Edit/Write 操作前，hook 调用 `gitnexus detect-changes` 检查当前改动影响的符号和执行流。如果影响范围超出当前任务范围，hook 告警。
+
+3. **索引自动维护** — Phase 4 每完成一个 sub-task（即 beads issue close），自动触发 `gitnexus analyze --force` 保持索引新鲜。
+
+4. **Docker 降级策略** — Windows 下 tree-sitter 已知 SIGSEGV。devflow 已有 `scripts/gitnexus-docker.ps1`，但需要确保无论 Docker 还是原生都能正常工作。方案：先试原生，crash 自动切 Docker。
+
 
 **现状**: 3 种工具按复杂度路由。
 
@@ -254,6 +320,9 @@ finishing-a-development-branch        → autoresearch security + optimize
 | Issue 状态机 triage | mattpocock | ❌ 没有 | ✅ /triage 流程 |
 | 71 套设计系统 | Open Design | ❌ 只有 7 套 | ✅ 可选扩展 |
 | MCP 原生设计桥 | Google Stitch | ❌ 没有 | ✅ 可选集成 |
+| **代码知识图谱（改前先查影响）** | **gitnexus** | **❌ 只提到名字** | **✅ 7 个注入点 + MCP 原生 + detect-changes hook** |
+| **跨仓库影响追踪** | **gitnexus** | **❌ 不支持** | **✅ group impact + 契约注册表** |
+| **索引自动维护** | **gitnexus** | **❌ 只跑一次** | **✅ sub-task 完成后自动 reindex** |
 
 ---
 
@@ -264,12 +333,17 @@ finishing-a-development-branch        → autoresearch security + optimize
 | **P0** | Phase 4 管道对齐 superpowers 原始链 | SKILL.md Phase 4 重写 | 高 |
 | **P0** | Phase 2 加入设计的审批环节 | SKILL.md Phase 2 | 中 |
 | **P0** | Adding verification-before-completion | SKILL.md 通用门禁 | 低 |
+| **P0** | **gitnexus context + impact 注入 Phase 4 每个 sub-task** | SKILL.md Phase 4 | 中 |
+| **P0** | **gitnexus detect-changes 集成 PreToolUse hook** | hooks/guardrails | 中 |
 | **P1** | beads 深度集成（依赖 + 门禁 + 质量） | SKILL.md + scripts | 中 |
 | **P1** | autoresearch 完整 loop optimize | SKILL.md Phase 4 | 中 |
 | **P1** | 前端生成工具扩展（Open Design + Dyad） | SKILL.md Phase 2 | 低 |
+| **P1** | **gitnexus MCP 模式注册到 settings.json** | .claude/settings.json | 低 |
 | **P2** | using-git-worktrees | SKILL.md 前期 | 中 |
 | **P2** | requesting-code-review per-task | SKILL.md Phase 4 | 低 |
 | **P2** | /diagnose + /triage | SKILL.md + scripts | 高 |
+| **P2** | **gitnexus 索引自动维护（sub-task close 后 reindex）** | SKILL.md + script | 中 |
 | **P3** | Google Stitch MCP | SKILL.md Phase 2 可选 | 低 |
 | **P3** | Dolt 版本历史利用 | 可选 | 低 |
+| **P3** | gitnexus group impact + 契约注册表 | SKILL.md + scripts | 高 |
 

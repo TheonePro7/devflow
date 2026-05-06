@@ -320,7 +320,14 @@ Phase 5: Finish (project-level, per-session)
 
 **更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
 
-**读取规则：** 收到用户消息后先读此文件，判断当前阶段再执行。如果 phase=1 且用户提新想法，走 Phase 1 引导流程。
+**读取规则：** 收到用户消息后先读此文件，判断当前阶段再执行。
+- phase=1（Ideate）：用户提新想法，走 Phase 1 引导流程；已有 PRD 则直接进 Phase 2
+- phase=2（Design）：按 4 阶段引擎执行（ui-req → arch-decision → scaffold → ux-docs → design-done）
+- phase=3（Setup）：检测工具是否齐全，运行安装流程
+- phase=4（Develop）：按 Phase 4 子步骤执行（brainstorming → grill → probe → plans → scenario → impl → review → security → optimize）
+- phase=5（Finish）：关闭 beads 任务，询问是否 autoresearch 优化，提交推送
+
+**写入规则：** 每次状态变化后（包括 step 变更、gate 状态变化）立即更新 `.devflow/state`。agent 必须手动编辑该文件更新字段。
 
 **Hook 强制执行：**
 - UserPromptSubmit：每步读取 state 注入提醒

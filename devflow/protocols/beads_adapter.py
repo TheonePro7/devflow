@@ -47,7 +47,14 @@ class BeadsAdapter:
                 capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0:
-                cmd = result.stdout.strip().split("\n")[0].strip()
+                candidates = result.stdout.strip().split("\n")
+                # Windows: 优先选 .exe, 其次 .cmd, 避免无扩展名的 npm shim
+                if sys.platform == "win32":
+                    for ext in (".exe", ".cmd"):
+                        for c in candidates:
+                            if c.strip().lower().endswith(ext):
+                                return c.strip()
+                cmd = candidates[0].strip()
                 if cmd:
                     return cmd
         except Exception:

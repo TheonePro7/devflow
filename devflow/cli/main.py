@@ -14,6 +14,7 @@ from devflow.cli.init_cmd import run_init
 from devflow.cli.sync_cmd import run_sync
 from devflow.cli.ideate_cmd import run_ideate
 from devflow.cli.log_cmd import run_log
+from devflow.cli.dev_cmd import run_dev
 
 
 def _setup_encoding():
@@ -80,6 +81,14 @@ def main(argv: list[str] | None = None):
     p_log.add_argument("--tail", type=int, default=0, help="只看最近 N 条")
     p_log.add_argument("--json", action="store_true", help="JSON 格式输出")
     p_log.set_defaults(func=run_log)
+
+    # dev
+    p_dev = subparsers.add_parser("dev", help="开发循环（start/finish/next/status）")
+    p_dev.add_argument("--path", help="项目路径（默认当前目录）")
+    p_dev.add_argument("action", choices=["start", "finish", "next", "status"],
+                       help="操作: start=<task-id> 开始开发, finish=<task-id> 完成, next 下一个, status 概览")
+    p_dev.add_argument("task_id", nargs="?", help="task ID（start/finish 时需要）")
+    p_dev.set_defaults(func=run_dev)
 
     # task
     p_task = subparsers.add_parser("task", help="任务管理")

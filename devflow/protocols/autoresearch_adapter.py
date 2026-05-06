@@ -157,7 +157,7 @@ class AutoresearchAdapter:
         """通过 npx skills run 调用 skill 命令。"""
         try:
             result = subprocess.run(
-                ["npx", "skills", "run", cmd],
+                ["npx", "--yes", "skills", "run", cmd],
                 capture_output=True, text=True, timeout=timeout,
                 cwd=self.project_path,
             )

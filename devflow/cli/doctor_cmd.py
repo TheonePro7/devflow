@@ -89,7 +89,7 @@ def _check_beads() -> tuple[bool, str]:
 def _check_gitnexus(path: Path) -> tuple[bool, str]:
     try:
         r = subprocess.run(
-            ["npx", "gitnexus", "--help"],
+            ["npx", "--yes", "gitnexus", "--help"],
             capture_output=True, text=True, timeout=30,
             cwd=path, shell=sys.platform == "win32",
             encoding="utf-8", errors="replace",
@@ -103,7 +103,7 @@ def _check_gitnexus(path: Path) -> tuple[bool, str]:
         r = subprocess.run(
             ["docker", "run", "--rm",
              "ghcr.io/abhigyanpatwari/gitnexus:latest",
-             "npx", "gitnexus", "--help"],
+             "npx", "--yes", "gitnexus", "--help"],
             capture_output=True, text=True, timeout=30,
             encoding="utf-8", errors="replace",
         )
@@ -117,7 +117,7 @@ def _check_gitnexus(path: Path) -> tuple[bool, str]:
 def _check_autoresearch() -> tuple[bool, str]:
     try:
         r = subprocess.run(
-            ["npx", "skills", "run", "autoresearch", "--help"],
+            ["npx", "--yes", "skills", "run", "autoresearch", "--help"],
             capture_output=True, text=True, timeout=15,
         )
         if r.returncode == 0:

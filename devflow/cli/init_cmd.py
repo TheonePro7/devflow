@@ -126,7 +126,7 @@ def _ensure_gitnexus(project_path: Path, force: bool) -> bool:
     # 尝试原生
     try:
         result = subprocess.run(
-            ["npx", "gitnexus", "--help"],
+            ["npx", "--yes", "gitnexus", "--help"],
             capture_output=True, text=True, timeout=30,
             cwd=project_path,
             shell=sys.platform == "win32",
@@ -142,7 +142,7 @@ def _ensure_gitnexus(project_path: Path, force: bool) -> bool:
         result = subprocess.run(
             ["docker", "run", "--rm",
              "ghcr.io/abhigyanpatwari/gitnexus:latest",
-             "npx", "gitnexus", "--help"],
+             "npx", "--yes", "gitnexus", "--help"],
             capture_output=True, text=True, timeout=60,
             encoding="utf-8", errors="replace",
         )
@@ -161,7 +161,7 @@ def _ensure_autoresearch(project_path: Path, force: bool) -> bool:
     # 检查是否已安装
     try:
         result = subprocess.run(
-            ["npx", "skills", "run", "autoresearch", "--help"],
+            ["npx", "--yes", "skills", "run", "autoresearch", "--help"],
             capture_output=True, text=True, timeout=30,
             cwd=project_path,
             encoding="utf-8", errors="replace",

@@ -171,7 +171,7 @@ class GitNexusAdapter:
         """通过 npx gitnexus 运行。"""
         try:
             result = subprocess.run(
-                ["npx", "gitnexus"] + args,
+                ["npx", "--yes", "gitnexus"] + args,
                 capture_output=True, text=True, timeout=timeout,
                 cwd=self.project_path,
                 shell=sys.platform == "win32",
@@ -208,7 +208,7 @@ class GitNexusAdapter:
             "-v", f"{host_path}:/repo",
             "-w", container_workdir,
             "ghcr.io/abhigyanpatwari/gitnexus:latest",
-            "npx", "gitnexus",
+            "npx", "--yes", "gitnexus",
         ] + args
         try:
             result = subprocess.run(

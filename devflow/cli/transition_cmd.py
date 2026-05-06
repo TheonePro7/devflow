@@ -85,12 +85,28 @@ def run_transition(args: argparse.Namespace):
         )
         print(f"  💾 状态记录已保存到 beads\n")
 
-    # 阶段特定提示
+    # 阶段特定提示 + 自动触发
     tips = {
-        "phase-1": "  开始需求梳理。问你: 目标用户是谁？核心场景？痛点？成功标准？\n  不问技术细节。\n",
+        "phase-1": "  开始需求梳理。\n",
         "phase-2": "  出技术设计方案。记录设计决策到 beads。\n",
         "phase-3": "  项目初始化中。运行 devflow init 确保环境就绪。\n",
         "phase-4": "  开发循环开始。运行 devflow task list 查看待办任务。\n",
         "phase-5": "  收尾阶段。完成后运行 git push。\n",
     }
-    print(tips.get(target_phase, ""))
+    tip = tips.get(target_phase, "")
+    if tip:
+        print(tip)
+
+    # 进入 phase-1 时自动启动 ideate
+    if target_phase == "phase-1" and not args.dry_run:
+        try:
+            from devflow.cli.ideate_cmd import run_ideate
+            _ideate_args = argparse.Namespace(
+                path=str(project_path),
+                resume=False,
+                force=False,
+                func=lambda x: None,
+            )
+            run_ideate(_ideate_args)
+        except Exception as e:
+            print(f"  ⚠️  ideate 启动失败: {e}")

@@ -15,6 +15,7 @@ from devflow.cli.sync_cmd import run_sync
 from devflow.cli.ideate_cmd import run_ideate
 from devflow.cli.log_cmd import run_log
 from devflow.cli.dev_cmd import run_dev
+from devflow.cli.doctor_cmd import run_doctor
 
 
 def _setup_encoding():
@@ -81,6 +82,12 @@ def main(argv: list[str] | None = None):
     p_log.add_argument("--tail", type=int, default=0, help="只看最近 N 条")
     p_log.add_argument("--json", action="store_true", help="JSON 格式输出")
     p_log.set_defaults(func=run_log)
+
+    # doctor
+    p_doctor = subparsers.add_parser("doctor", help="一键环境诊断")
+    p_doctor.add_argument("--path", help="项目路径（默认当前目录）")
+    p_doctor.add_argument("--fix", action="store_true", help="尝试自动修复")
+    p_doctor.set_defaults(func=run_doctor)
 
     # dev
     p_dev = subparsers.add_parser("dev", help="开发循环（start/finish/next/status）")

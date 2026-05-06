@@ -459,7 +459,7 @@ Process Overview:
     1. Collect all outputs into structured JSON
     2. Save to .devflow/prd-context.json:
        {
-         "phase": 0,
+         "phase": 1,
          "stage": "complete",
          "outputs": {
            "problemStatement": "<from Stage 1>",

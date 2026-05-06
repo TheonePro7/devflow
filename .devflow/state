@@ -1,1 +1,1 @@
-{"phase":4,"step":"grill","feature":"autoresearch gates hardening — 将 4 道自动门禁从文档变为可执行机制","prd":"","blocker":"","gate_probe":"pending","gate_scenario":"pending","gate_fix":"pending","gate_security":"pending","updatedAt":"2026-05-07T00:00:00Z"}
+{"phase":5,"step":"finish","feature":"autoresearch gates hardening — 将 4 道自动门禁从文档变为可执行机制","prd":"","blocker":"","gate_probe":"done","gate_scenario":"done","gate_fix":"done","gate_security":"done","updatedAt":"2026-05-07T00:00:00Z"}

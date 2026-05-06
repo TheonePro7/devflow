@@ -1,1 +1,1 @@
-{"phase":2,"step":"brainstorming","feature":"Phase 0 Ideate 增强 — 想法到可开发 PRD 的智能引导","prd":"","blocker":"","updatedAt":"2026-05-05T00:00:00Z"}
+{"phase":4,"step":"grill","feature":"autoresearch gates hardening — 将 4 道自动门禁从文档变为可执行机制","prd":"","blocker":"","gate_probe":"pending","gate_scenario":"pending","gate_fix":"pending","gate_security":"pending","updatedAt":"2026-05-07T00:00:00Z"}

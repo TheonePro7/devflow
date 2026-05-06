@@ -63,5 +63,55 @@ if ($phaseRaw -eq 4 -and $step -eq "brainstorming" -and -not [string]::IsNullOrE
     }
 }
 
+# Phase 4 autoresearch gate hard-blocking
+if ($phaseRaw -eq 4) {
+    # Allow edits to state file itself (needed to update gates)
+    if (-not [string]::IsNullOrEmpty($filePath) -and $filePath -match '\.devflow[\\/]state$') {
+        @{ continue = $true } | ConvertTo-Json -Compress
+        exit 0
+    }
+
+    # Only check code file edits (not config, docs, etc.)
+    if (-not [string]::IsNullOrEmpty($filePath) -and $filePath -match '\.(js|ts|py|go|rs|rb|php|c|cpp|h|hpp|java|kt|swift)$') {
+        $gatesExist = $null -ne $state.gate_probe
+
+        # gate_probe check: step=plans requires probe done
+        if ($step -eq "plans" -and $gatesExist -and $state.gate_probe -ne "done") {
+            $msg = if ($state.gate_probe -eq "skipped") { $null } else { "⛔ devflow 门禁拦截: 必须先运行 `$autoresearch probe` 才能进入 writing-plans 阶段。完成后设置 .devflow/state 中 gate_probe=done。" }
+            if ($msg) {
+                @{ systemMessage = $msg; continue = $false; stopReason = "autoresearch:probe gate not passed" } | ConvertTo-Json -Compress
+                exit 0
+            }
+        }
+
+        # gate_probe check: step=impl requires probe done (in case step was set directly)
+        if ($step -eq "impl" -and $gatesExist -and $state.gate_probe -ne "done" -and $state.gate_probe -ne "skipped") {
+            @{
+                systemMessage = "⛔ devflow 门禁拦截: gate_probe 未完成。必须先运行 `$autoresearch probe` 才能开始实现。或设置 gate_probe=skipped 跳过。"
+                continue = $false; stopReason = "autoresearch:probe gate not passed"
+            } | ConvertTo-Json -Compress
+            exit 0
+        }
+
+        # gate_scenario check: step=impl requires scenario done
+        if ($step -eq "impl" -and $gatesExist -and $state.gate_scenario -ne "done" -and $state.gate_scenario -ne "skipped") {
+            @{
+                systemMessage = "⛔ devflow 门禁拦截: 必须先运行 `$autoresearch scenario` 才能开始实现。完成后设置 .devflow/state 中 gate_scenario=done。"
+                continue = $false; stopReason = "autoresearch:scenario gate not passed"
+            } | ConvertTo-Json -Compress
+            exit 0
+        }
+
+        # gate_security check: step=finish requires security done
+        if ($step -eq "finish" -and $gatesExist -and $state.gate_security -ne "done" -and $state.gate_security -ne "skipped") {
+            @{
+                systemMessage = "⛔ devflow 门禁拦截: 必须先运行 `$autoresearch security --diff` 才能完成分支。完成后设置 .devflow/state 中 gate_security=done。"
+                continue = $false; stopReason = "autoresearch:security gate not passed"
+            } | ConvertTo-Json -Compress
+            exit 0
+        }
+    }
+}
+
 # All good
 @{ continue = $true } | ConvertTo-Json -Compress

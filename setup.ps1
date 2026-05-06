@@ -196,6 +196,10 @@ if (-not (Test-Path $stateFile)) {
         feature = ""
         prd = ""
         blocker = ""
+        gate_probe = "pending"
+        gate_scenario = "pending"
+        gate_fix = "pending"
+        gate_security = "pending"
         updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
     } | ConvertTo-Json -Compress
     $initialState | Out-File $stateFile -Encoding utf8

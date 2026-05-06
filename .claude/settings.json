@@ -25,7 +25,8 @@
       "Bash(xxd)",
       "Bash(python)",
       "Bash(python _update_section9.py)",
-      "Bash(bash scripts/test-guardrails.sh)"
+      "Bash(bash scripts/test-guardrails.sh)",
+      "Read(//c/Users/Administrator/.claude/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",

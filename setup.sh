@@ -182,7 +182,7 @@ else
 fi
 if [ ! -f .devflow/state ]; then
   cat > .devflow/state << 'STATE'
-{"phase":1,"step":"","feature":"","prd":"","blocker":"","updatedAt":"2026-05-05T00:00:00Z"}
+{"phase":1,"step":"","feature":"","prd":"","blocker":"","gate_probe":"pending","gate_scenario":"pending","gate_fix":"pending","gate_security":"pending","updatedAt":"2026-05-05T00:00:00Z"}
 STATE
   echo -e "${GREEN}[PASS] .devflow/state initialized${NC}"
 else

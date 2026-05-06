@@ -257,23 +257,23 @@ Phase 4: Develop (session-level, each task)
                                  + ADR + gitnexus-docker impact (HITL gate)
   ══ AUTORESEARCH ═══════①¾── probe: adversarial constraint
                                  discovery after manual grill
-                                 (/autoresearch:probe)
+                                 (HARD GATE — hook blocks next step)
   writing-plans  ──────②── beads: create sub-issues per task
                                  gitnexus-docker: impact <接口> --depth 2
                                  PRD→beads: auto-split tasks
   ══ AUTORESEARCH ═══════②½── scenario: edge case discovery
                                  per task before coding
-                                 (/autoresearch:scenario)
+                                 (HARD GATE — hook blocks next step)
   subagent-dev   ──────③── gitnexus-docker: context <目标函数>
                                  (fed to subagents)
                                  beads: bd ready check
                                  TDD deep docs
                                  ══ per-task quality gate ══
-                                 each task done → :fix
-                                 (/autoresearch:fix)
+                                 each task done → $autoresearch fix
+                                 (HARD GATE — cannot skip)
   code-review           (superpowers native)
   ══ AUTORESEARCH ═══════②¾── security: audit changes before
-                                 finish (/autoresearch:security)
+                                 finish (HARD GATE — hook blocks finish)
   finish-branch         (superpowers native)
 
   Background:    Git guardrails block dangerous commands
@@ -622,17 +622,18 @@ Process:
 Note: This is a HUMAN-IN-THE-LOOP step. Must get confirmation.
 ```
 
-### ①¾ — Autoresearch Probe Injection ★ AUTO
+### ①¾ — Autoresearch Probe Injection ★ HARD GATE
 
-After grill passes, before writing plans (runs automatically unless opt-out):
+After grill passes, before writing plans. **PreToolUse hook blocks `plans` step if gate_probe != done.**
 
-> Invokes: `/autoresearch:probe`
+> Invokes: `$autoresearch probe`
 > Duration: ~2 minutes, 8 adversarial personas interrogate the design
 
 ```yaml
-When: DEVFLOW_NO_AUTORESEARCH is NOT set
-What: /autoresearch:probe --chain plan,autoresearch
+Enforcement: HARD — hook blocks Edit|Write when step=plans and gate_probe=pending
+What: $autoresearch probe
   Topic: <feature title from brainstorming>
+  Depth: standard
 
 Why: The manual grill finds obvious blind spots.
      autoresearch:probe goes deeper — 8 adversarial personas
@@ -644,8 +645,10 @@ Output:
     contradictions, assumptions, handoff.json
   - These feed directly into writing-plans task decomposition
 
-Opt-out: Tell the agent "skip autoresearch" or set env var
-         DEVFLOW_NO_AUTORESEARCH=1 before session.
+After completion:
+  Update .devflow/state → set gate_probe=done, step=plans
+
+Opt-out: Set gate_probe=skipped in .devflow/state (user must explicitly request skip)
 ```
 
 ### ② — Writing Plans Injection
@@ -667,16 +670,16 @@ auto-split (PRD→beads):
   - scripts/prd-to-beads.ps1/.sh -d <design.md> -e "<title>" -i <epic_id>
 ```
 
-### ②½ — Autoresearch Scenario Injection ★ AUTO
+### ②½ — Autoresearch Scenario Injection ★ HARD GATE
 
-After tasks are decomposed, before implementation starts:
+After tasks are decomposed, before implementation starts. **PreToolUse hook blocks `impl` step if gate_scenario != done.**
 
-> Invokes: `/autoresearch:scenario`
+> Invokes: `$autoresearch scenario`
 > Focus: generate edge cases for each identified task
 
 ```yaml
-When: DEVFLOW_NO_AUTORESEARCH is NOT set
-What: /autoresearch:scenario
+Enforcement: HARD — hook blocks Edit|Write when step=impl and gate_scenario=pending
+What: $autoresearch scenario
   Scenario: <task title>
   Iterations: 15
   Focus: edge-cases
@@ -689,6 +692,9 @@ Why: Tasks from writing-plans describe WHAT to build.
 Output: scenario/{date}-{slug}/ with detailed test scenarios
         per task. These are added to task descriptions or
         TDD test cases before implementation begins.
+
+After completion:
+  Update .devflow/state → set gate_scenario=done, step=impl
 ```
 
 ### ③ — Implementation Injection
@@ -712,25 +718,30 @@ beads:
 tdd-deep-docs:
   - Reference docs/tdd/*.md for testing philosophy
 
-autoresearch:fix — Per-Task Quality Gate ★ AUTO:
+autoresearch:fix — Per-Task Quality Gate ★ HARD GATE (per-task):
   After EACH task implementation completes, before next task:
-  Invoke: /autoresearch:fix --target "npm run build && npm test"
+  Invoke: $autoresearch fix --target "npm run build && npm test"
   If :fix finds errors → fix them → re-run → pass gate
   Only then claim next task
 
   This is a ZERO-ERROR GATE. Each task must pass before
-  the next one starts. (Skip with "skip fix gate")
+  the next one starts.
+  
+  After all tasks pass gate_fix:
+    Update .devflow/state → set gate_fix=done
+  
+  Opt-out: Set gate_fix=skipped (user must explicitly request)
 ```
 
-### ②¾ — Autoresearch Security Injection ★ AUTO
+### ②¾ — Autoresearch Security Injection ★ HARD GATE
 
-After code review, before finish-branch:
+After code review, before finish-branch. **PreToolUse hook blocks `finish` step if gate_security != done.**
 
-> Invokes: `/autoresearch:security --diff`
+> Invokes: `$autoresearch security --diff`
 
 ```yaml
-When: DEVFLOW_NO_AUTORESEARCH is NOT set
-What: /autoresearch:security --diff
+Enforcement: HARD — hook blocks Edit|Write when step=finish and gate_security=pending
+What: $autoresearch security --diff
   Iterations: 10
 
 Why: Last line of defense. Audits only the changed files
@@ -740,7 +751,10 @@ Why: Last line of defense. Audits only the changed files
 Output: security/{date}-{slug}/ with structured report.
         Critical/High findings must be resolved before finish.
 
-Opt-out: Tell agent "skip security audit" or use env var.
+After completion:
+  Update .devflow/state → set gate_security=done, step=finish
+
+Opt-out: Set gate_security=skipped in .devflow/state (user must explicitly request)
 ```
 
 ### Git Guardrails (Background)

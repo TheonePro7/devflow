@@ -78,7 +78,12 @@
       "Bash(python -m devflow.cli.main state --path \"F:\\\\AI\\\\devflow\")",
       "Bash(python -m devflow.cli.main transition phase-1/start --dry-run --path \"F:\\\\AI\\\\devflow\")",
       "Bash(python -c \"import sys; sys.path.insert\\(0,'.'\\); from devflow.protocols.gitnexus_adapter import GitNexusAdapter; a = GitNexusAdapter\\(\\); print\\(repr\\(a._win_to_docker_path\\('F:\\\\\\\\AI\\\\\\\\devflow'\\)\\)\\)\")",
-      "Bash(python -m devflow.cli.main sync --help)"
+      "Bash(python -m devflow.cli.main sync --help)",
+      "Bash(python -m devflow.cli.main transition phase-1/start)",
+      "Bash(where bd *)",
+      "Bash(devflow)",
+      "Bash(.\\\\.devflow\\\\tasks.json)",
+      "Bash(python -m pytest tests/ -v)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",

@@ -69,7 +69,11 @@ def main(argv: list[str] | None = None):
     p_task = subparsers.add_parser("task", help="任务管理")
     p_task.add_argument("--path", help="项目路径（默认当前目录）")
     p_task.add_argument("action", choices=["create", "list", "show"])
-    p_task.add_argument("id_or_epic", nargs="?", help="task ID 或 epic ID")
+    p_task.add_argument("id_or_epic", nargs="?", help="create: epic ID | show: task ID")
+    p_task.add_argument("--title", help="创建 task 时的标题")
+    p_task.add_argument("--description", help="创建 task 时的描述")
+    p_task.add_argument("--type", default="task", choices=["task", "bug", "feature", "chore"],
+                        help="创建 task 的类型（默认 task）")
     p_task.set_defaults(func=run_task)
 
     args = parser.parse_args(argv)

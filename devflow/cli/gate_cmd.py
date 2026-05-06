@@ -238,8 +238,11 @@ def _run_security(adapter: BeadsAdapter, task_id: str, project_path: Path):
 
     available, mode = auto.check_available()
     if not available:
-        print(f"  ⚠️  autoresearch 不可用，跳过安全检查。")
+        state = record_gate_failure(task_id, "security_checked")
+        print(f"  ⚠️  autoresearch 不可用，跳过安全检查 (尝试 {state.retries}/3)。")
         print(f"  安全审计可跳过（可选门禁）。")
+        if should_escalate(task_id, "security_checked"):
+            print(f"\n  {get_escalation_message(task_id, 'security_checked')}\n")
         sys.exit(1)
 
     result = auto.security(diff_mode=True)
@@ -253,10 +256,13 @@ def _run_security(adapter: BeadsAdapter, task_id: str, project_path: Path):
         print(f"  ✅ security_checked = true\n")
         mark_resolved(task_id, "security_checked")
     else:
-        print(f"  ⚠️  安全审计未完全通过")
+        state = record_gate_failure(task_id, "security_checked")
+        print(f"  ⚠️  安全审计未完全通过 (尝试 {state.retries}/3)")
         error = result.get("error", "")
         if error:
             print(f"     {error[:500]}")
+        if should_escalate(task_id, "security_checked"):
+            print(f"\n  {get_escalation_message(task_id, 'security_checked')}\n")
         # security 是可选门禁，仅记录不阻止
         adapter.update_task_field(task_id, "security_checked", True)
         print(f"  ✅ security_checked = true (可选门禁，已记录)\n")

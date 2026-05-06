@@ -30,28 +30,31 @@ def main(argv: list[str] | None = None):
         description="自主工程引擎 — 从模糊创意到可交付产品的 AI 工作流编排器",
     )
     parser.add_argument("--version", action="version", version="devflow 0.1.0")
-    parser.add_argument("--path", help="项目路径（默认当前目录）")
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
     # state
     p_state = subparsers.add_parser("state", help="显示当前状态")
+    p_state.add_argument("--path", help="项目路径（默认当前目录）")
     p_state.set_defaults(func=run_state)
 
     # init
     p_init = subparsers.add_parser("init", help="初始化 devflow 项目")
+    p_init.add_argument("--path", help="项目路径（默认当前目录）")
     p_init.add_argument("--force", action="store_true", help="强制重新初始化")
     p_init.add_argument("--skip-beads", action="store_true", help="跳过 beads 初始化")
     p_init.set_defaults(func=run_init)
 
     # transition
     p_trans = subparsers.add_parser("transition", help="状态转移")
+    p_trans.add_argument("--path", help="项目路径（默认当前目录）")
     p_trans.add_argument("target", nargs="?", help="目标状态（如 phase-1/start）")
     p_trans.add_argument("--dry-run", action="store_true", help="预览不执行")
     p_trans.set_defaults(func=run_transition)
 
     # gate
     p_gate = subparsers.add_parser("gate", help="门禁管理")
+    p_gate.add_argument("--path", help="项目路径（默认当前目录）")
     p_gate.add_argument("action", choices=["check", "run-impact-analysis", "run-verification", "run-security", "close"],
                         help="门禁操作")
     p_gate.add_argument("task_id", help="beads task ID")
@@ -59,10 +62,12 @@ def main(argv: list[str] | None = None):
 
     # sync
     p_sync = subparsers.add_parser("sync", help="同步各工具状态到 beads")
+    p_sync.add_argument("--path", help="项目路径（默认当前目录）")
     p_sync.set_defaults(func=run_sync)
 
     # task
     p_task = subparsers.add_parser("task", help="任务管理")
+    p_task.add_argument("--path", help="项目路径（默认当前目录）")
     p_task.add_argument("action", choices=["create", "list", "show"])
     p_task.add_argument("id_or_epic", nargs="?", help="task ID 或 epic ID")
     p_task.set_defaults(func=run_task)
@@ -75,6 +80,10 @@ def main(argv: list[str] | None = None):
 
     try:
         args.func(args)
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        raise
     except Exception as e:
         print(f"❌ 错误: {e}", file=sys.stderr)
         sys.exit(1)

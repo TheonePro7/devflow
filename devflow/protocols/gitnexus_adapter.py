@@ -183,18 +183,30 @@ class GitNexusAdapter:
         except Exception as e:
             return False, "", str(e)
 
+    def _win_to_docker_path(self, path_str: str) -> str:
+        """将 Windows 路径转换为 Docker 兼容的 Linux 路径。
+
+        Example: F:\\AI\\devflow → /f/AI/devflow
+        """
+        if sys.platform != "win32":
+            return path_str
+        drive = path_str[0].lower()
+        rest = path_str[2:].replace("\\", "/")
+        return f"/{drive}{rest}"
+
     def _run_docker(self, args: list[str], timeout: int = 120) -> tuple[bool, str, str]:
         """通过 Docker 容器运行 gitnexus。
 
         Docker 容器内入口为 npx gitnexus，挂载项目到 /repo。
-        Windows 下需要转换路径格式。
+        Windows 下需要将容器内路径转换为 Linux 格式。
         """
         host_path = str(self.project_path)
+        container_workdir = self._win_to_docker_path(str(self.project_path))
         # Docker 容器内工作目录设为 /repo
         docker_args = [
             "docker", "run", "--rm",
             "-v", f"{host_path}:/repo",
-            "-w", "/repo",
+            "-w", container_workdir,
             "ghcr.io/abhigyanpatwari/gitnexus:latest",
             "npx", "gitnexus",
         ] + args

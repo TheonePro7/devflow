@@ -64,7 +64,21 @@
       "Bash(python -m devflow.cli.main sync)",
       "Bash(python -m devflow.cli.main gate --help)",
       "Bash(python -m devflow.cli.main task --help)",
-      "Bash(python -m devflow.cli.main transition --help)"
+      "Bash(python -m devflow.cli.main transition --help)",
+      "Bash(python -m devflow.cli.main state --path \"F:\\\\AI\\\\devflow-test\")",
+      "Bash(python -m devflow.cli.main transition phase-1/start --dry-run)",
+      "Bash(python -m devflow.cli.main transition)",
+      "Bash(python -m devflow.cli.main transition invalid-target)",
+      "Bash(python -m devflow.cli.main gate check dummy-task-1)",
+      "Bash(python -m devflow.cli.main gate run-impact-analysis dummy-task-1)",
+      "Bash(docker run *)",
+      "Bash(python -m devflow.cli.main task list)",
+      "Bash(python -m devflow.cli.main task show dummy)",
+      "Bash(python -m devflow.cli.main init --help)",
+      "Bash(python -m devflow.cli.main state --path \"F:\\\\AI\\\\devflow\")",
+      "Bash(python -m devflow.cli.main transition phase-1/start --dry-run --path \"F:\\\\AI\\\\devflow\")",
+      "Bash(python -c \"import sys; sys.path.insert\\(0,'.'\\); from devflow.protocols.gitnexus_adapter import GitNexusAdapter; a = GitNexusAdapter\\(\\); print\\(repr\\(a._win_to_docker_path\\('F:\\\\\\\\AI\\\\\\\\devflow'\\)\\)\\)\")",
+      "Bash(python -m devflow.cli.main sync --help)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",

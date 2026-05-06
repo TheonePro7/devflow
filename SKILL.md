@@ -304,14 +304,19 @@ Phase 5: Finish (project-level, per-session)
 
 | 字段 | 说明 | 取值示例 |
 |------|------|---------|
-| `phase` | 当前大阶段 | 0, 0.5, 1, 2, 3 |
-| `step` | 当前精确步骤 | brainstorming, grill, probe, plans, scenario, impl, review, security |
+| `phase` | 当前大阶段 | 1, 2, 3, 4, 5 |
+| `step` | 当前精确步骤 | brainstorming, grill, probe, plans, scenario, impl, review, security, optimize, finish |
 | `feature` | 当前正在开发的功能 | "用户注册" |
 | `prd` | PRD 文件路径 | "docs/prd/user-registration.md" |
 | `blocker` | 阻塞原因（如有） | "等待设计稿" |
+| `gate_probe` | probe 门禁状态 | pending, done, skipped |
+| `gate_scenario` | scenario 门禁状态 | pending, done, skipped |
+| `gate_fix` | fix 门禁状态 | pending, done, skipped |
+| `gate_security` | security 门禁状态 | pending, done, skipped |
 | `updatedAt` | 最后更新时间 | "2026-05-05T12:00:00Z" |
 | | **Phase 1 steps:** `problem` → `users` → `features` → `constraints` → `prd` |
 | | **Phase 2 steps:** `ui-req` → `arch-decision` → `scaffold` → `ux-docs` → `design-done` |
+| | **Phase 4 steps:** `brainstorming` → `grill` → `probe` → `plans` → `scenario` → `impl` → `review` → `security` → `optimize` → `finish` |
 
 **更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
 

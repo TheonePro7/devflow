@@ -18,9 +18,13 @@ if (Test-Path $stateFile) {
             @{
                 systemMessage = "⚙️ devflow: 当前没有进行中的功能。如果用户提出新想法，请先读取 .devflow/state 并按 phase 阶段执行，不要直接写代码。"
             } | ConvertTo-Json -Compress
-        } else {
+        } elseif ($phase -eq 4) {
+            $gateInfo = ""
+            if ($null -ne $state.gate_probe) {
+                $gateInfo = " | 门禁: probe=$($state.gate_probe) scenario=$($state.gate_scenario) fix=$($state.gate_fix) security=$($state.gate_security)"
+            }
             @{
-                systemMessage = "⚙️ devflow 状态追踪: [Phase $phase] [Step: $step] 功能: $feature。请按 devflow 流程执行当前步骤，不要跳步骤。"
+                systemMessage = "⚙️ devflow 状态追踪: [Phase $phase] [Step: $step] 功能: $feature$gateInfo。请按 devflow 流程执行当前步骤，门禁未完成会被 Hook 拦截。"
             } | ConvertTo-Json -Compress
         }
     } catch {

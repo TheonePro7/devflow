@@ -141,27 +141,46 @@ def run_ideate(args: argparse.Namespace):
 
         if resp in ("", "y", "yes"):
             epic_id = _create_epic_from_ideate(bead_adapter, results, project_path)
-            # 询问是否生成 PRD
+
+            # 自动链式触发: PRD → transition phase-2
+            print(f"\n  ── [自动链] PRD 生成 ──")
             try:
-                resp2 = input("  是否从 IDEATE 生成 PRD markdown？(Y/n): ").strip().lower()
+                from devflow.cli.prd_cmd import run_prd
+                title = next(
+                    (a["answer"].split("\n")[0][:60] for a in results.get("answers", {}).values() if a.get("answer")),
+                    None
+                )
+                prd_args = argparse.Namespace(
+                    path=str(project_path),
+                    title=title,
+                    force=False,
+                    func=lambda x: None,
+                )
+                run_prd(prd_args)
+                print(f"  ✅ PRD 已生成\n")
+            except Exception as e:
+                print(f"  ⚠️  PRD 生成失败: {e}\n")
+
+            # 询问是否继续进入 design 阶段
+            try:
+                resp2 = input("  是否自动进入 Phase 2 (Design) 阶段？(Y/n): ").strip().lower()
             except (EOFError, KeyboardInterrupt):
                 resp2 = "n"
             if resp2 in ("", "y", "yes"):
                 try:
-                    from devflow.cli.prd_cmd import run_prd
-                    title = next(
-                        (a["answer"].split("\n")[0][:60] for a in results.get("answers", {}).values() if a.get("answer")),
-                        None
-                    )
-                    prd_args = argparse.Namespace(
+                    from devflow.cli.transition_cmd import run_transition
+                    trans_args = argparse.Namespace(
                         path=str(project_path),
-                        title=title,
-                        force=False,
+                        target="phase-2/start",
+                        dry_run=False,
                         func=lambda x: None,
                     )
-                    run_prd(prd_args)
+                    run_transition(trans_args)
+                    print(f"  ✅ 已进入 Phase 2\n")
+                except SystemExit:
+                    print(f"  ⚠️  transition 条件未满足，请稍后手动运行 devflow transition phase-2/start\n")
                 except Exception as e:
-                    print(f"  ⚠️  PRD 生成失败: {e}")
+                    print(f"  ⚠️  transition 失败: {e}\n")
     else:
         print(f"\n  ⚠️  完成了 {len(answers)}/4 阶段。")
         print(f"  用 devflow ideate --resume 继续\n")

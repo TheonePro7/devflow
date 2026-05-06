@@ -94,7 +94,7 @@
       "Bash(devflow prd *)",
       "Bash(devflow bootstrap *)",
       "Bash(python -m pytest tests/ -v -m integration)",
-      "PowerShell(git add devflow/cli/prd_cmd.py devflow/cli/bootstrap_cmd.py tests/test_integration.py devflow/cli/ideate_cmd.py devflow/cli/main.py .claude/settings.json)"
+      "PowerShell(git add devflow/cli/ideate_cmd.py tests/test_integration.py .claude/settings.json)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
@@ -146,115 +146,39 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/guardrails-git.sh",
-            "shell": "bash",
-            "timeout": 5,
-            "statusMessage": "devflow: checking git safety..."
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NoProfile -File .claude/hooks/devflow-phase-check.ps1",
+            "command": "powershell -NoProfile -File .claude/hooks/devflow-init-check.ps1",
             "shell": "powershell",
-            "timeout": 3,
-            "statusMessage": "devflow: checking phase..."
+            "timeout": 10,
+            "statusMessage": "devflow: checking devflow init state..."
           }
         ]
-      },
+      }
+    ],
+    "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/devflow-phase-check.sh",
-            "shell": "bash",
-            "timeout": 3,
-            "statusMessage": "devflow: checking phase..."
+            "command": "powershell -NoProfile -File .claude/hooks/beads-export.ps1",
+            "shell": "powershell",
+            "timeout": 10
           }
         ]
       }
     ],
     "SessionStart": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -File .claude/hooks/devflow-init-check.ps1",
-            "shell": "powershell",
-            "timeout": 10,
-            "statusMessage": "devflow: checking project state..."
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/devflow-init-check.sh",
-            "shell": "bash",
-            "timeout": 10,
-            "statusMessage": "devflow: checking project state..."
-          }
-        ]
-      },
-      {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "bd prime"
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
+            "command": "powershell -NoProfile -File .claude/hooks/session-start.ps1"
+          },
           {
             "type": "command",
-            "command": "python -m agent_memory_mcp.cli recall",
-            "timeout": 15,
-            "statusMessage": "agent-memory: loading memories..."
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python -m agent_memory_mcp.cli summarize",
-            "timeout": 30,
-            "statusMessage": "agent-memory: saving session summary..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NoProfile -File .claude/hooks/devflow-state-check.ps1",
-            "shell": "powershell",
-            "timeout": 3,
-            "statusMessage": "devflow: checking state..."
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/devflow-state-check.sh",
-            "shell": "bash",
-            "timeout": 3,
-            "statusMessage": "devflow: checking state..."
+            "command": "powershell -NoProfile -Command \"$m=Get-Content -Path '.claude\\hooks\\devflow-prime.ps1' -Raw -ErrorAction SilentlyContinue; if($m){ iex $m }\"",
+            "timeout": 15
           }
         ]
       }

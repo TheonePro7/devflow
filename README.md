@@ -4,7 +4,7 @@
 
 [English](README.en.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
-devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到成品**，覆盖 5 个阶段：创意梳理（Phase 0）→ 前端设计（Phase 0.5）→ 项目初始化（Phase 1）→ 开发循环（Phase 2）→ 会话收尾（Phase 3）。
+devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到成品**，覆盖 5 个阶段：创意梳理（Phase 1）→ 前端设计（Phase 2）→ 项目初始化（Phase 3）→ 开发循环（Phase 4）→ 会话收尾（Phase 5）。
 
 包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**（通过 Docker 运行，绕过 Windows tree-sitter 兼容性问题）、**autoresearch 自动优化**（4 个自动门）、**screenshot-to-code 前端生成**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
 
@@ -15,11 +15,11 @@ devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到
 ## 目录
 
 - [一、核心架构](#一核心架构)
-- [二、Phase 0：创意梳理（Ideate）](#二phase-0创意梳理ideate)
-- [三、Phase 0.5：前端设计（Design）](#三phase-05前端设计design)
-- [四、Phase 1：项目初始化（Setup）](#四phase-1项目初始化setup)
-- [五、Phase 2：开发循环（Develop）](#五phase-2开发循环develop)
-- [六、Phase 3：会话收尾（Finish）](#六phase-3会话收尾finish)
+- [二、Phase 1：创意梳理（Ideate）](#二phase-1创意梳理ideate)
+- [三、Phase 2：前端设计（Design）](#三phase-2前端设计design)
+- [四、Phase 3：项目初始化（Setup）](#四phase-3项目初始化setup)
+- [五、Phase 4：开发循环（Develop）](#五phase-4开发循环develop)
+- [六、Phase 5：会话收尾（Finish）](#六phase-5会话收尾finish)
 - [七、工具注入详解](#七工具注入详解)
 - [八、Git Guardrails 安全防护](#八git-guardrails-安全防护)
 - [九、Hook 系统](#九hook-系统)
@@ -40,25 +40,26 @@ devflow 采用 **5 阶段**架构，从灵感到成品的全生命周期：
                             │
        ┌────────────────────┼────────────────────┐
        ▼                    ▼                    ▼
-   Phase 0             Phase 0.5           Phase 1-3
+   Phase 1             Phase 2             Phase 3-5
    Ideate              Design              Setup→Develop→Finish
 
    Idea → PRD          PRD → Frontend      Full-stack dev
 
-   Claude 引导         screenshot-to-code  superpowers 管道
-   用户画像            + dyad              + autoresearch 门禁
-   + 问题分析          + UI 架构           + git guardrails
+   Claude 引导        4 阶段 UI 设计      superpowers 管道
+   用户画像           引擎                + autoresearch 门禁
+   + 问题分析          + 自动框架匹配      + git guardrails
+   + to-prd 输出       + Claude Direct
 ```
 
 ### 设计原则
 
 | 原则 | 说明 |
 |------|------|
-| **从灵感到产品** | Phase 0 帮助非技术用户梳理想法；Phase 0.5 生成前端设计；Phase 1-3 工程落地 |
+| **从灵感到产品** | Phase 1 帮助非技术用户梳理想法；Phase 2 生成前端设计；Phase 3-5 工程落地 |
 | **不重写 superpowers** | devflow 不做 superpowers 已做的事。Brainstorming、writing-plans、subagent-dev、code-review、finish-branch 全部委托给 superpowers-* |
 | **工具注入** | devflow 的价值在于在管道的定义点注入 beads、gitnexus、grill、screenshot-to-code 等工具 |
-| **硬关卡** | Phase 0 → Phase 0.5 → Phase 1 顺序执行。Plan-grill 未通过不能进入 writing-plans |
-| **HITL 优先** | Grill 拷问、Phase 3 报告需要人类确认。自动化不跳过判断 |
+| **硬关卡** | Phase 1 → Phase 2 → Phase 3 顺序执行。Plan-grill 未通过不能进入 writing-plans |
+| **HITL 优先** | Grill 拷问、Phase 5 报告需要人类确认。自动化不跳过判断 |
 | **安全默认** | Git guardrails 默认拦截危险操作，覆写需要显式意图 |
 
 ### 与 superpowers 的职责划分
@@ -77,7 +78,7 @@ devflow 采用 **5 阶段**架构，从灵感到成品的全生命周期：
 
 ---
 
-## 二、Phase 0：创意梳理（Ideate）
+## 二、Phase 1：创意梳理（Ideate）
 
 **面向人群**：有想法但不知道如何落地的用户。不需要编程或设计经验。
 
@@ -115,46 +116,58 @@ Stage 4: 约束与成功标准
 - **降低门槛**：不需要写需求文档，用自然语言描述即可
 - **自适应探索**：不会问重复问题，只挖掘信息缺口
 - **结构化输出**：从模糊想法到可执行的完整 PRD
-- **无缝衔接**：PRD 直接喂给 Phase 0.5 做前端设计，或 Phase 2 做开发
+- **无缝衔接**：PRD 直接喂给 Phase 2 做前端设计，或 Phase 4 做开发
 
 ---
 
-## 三、Phase 0.5：前端设计（Design）
+## 三、Phase 2：前端设计（Design）
 
 **面向人群**：需要前端界面但不懂设计或前端开发的用户。
 
 ### 发生了什么
 
-从 PRD 出发，生成前端设计和代码：
+Phase 1 生成 PRD 后，**强制进入 Phase 2**。这是一个 4 阶段流程引擎，和 Phase 1 一样有明确定义的阶段、输出物和确认点：
 
-```yaml
-1. 从 PRD 提取 UI 需求:
-   - 需要哪些页面/界面
-   - 关键用户流程与交互
-   - 数据展示需求
-2. 技术栈决策:
-   - 默认: HTML + Tailwind CSS（门槛最低）
-   - 推荐: React（适合 SPA）/ Vue / Svelte
-3. 生成前端支持:
-   - 方式 A: screenshot-to-code — 用户提供参考截图/设计稿
-     自动安装 → 截图转前端代码 (HTML+Tailwind/React/Vue)
-   - 方式 B: dyad — 从 prompt 直接生成 UI（无设计稿时）
-   - 方式 C: Claude 直接生成（默认推荐）
-4. 输出:
-   - 前端项目脚手架（组件、页面、样式）
-   - API 集成桩代码
-   - docs/ux/ 设计决策文档
+```
+PRD 完成
+  │
+  ├── Stage 1: UI 需求提取 (step=ui-req)
+  │   ├── 从 PRD 提取页面/界面清单
+  │   ├── 提取用户流程与交互路径
+  │   ├── 提取数据展示需求
+  │   ├── 自动分类项目类型 (landing/admin/ecommerce/...)
+  │   └── 输出: UI 需求摘要
+  │
+  ├── Stage 2: 架构蓝图 (step=arch-decision)
+  │   ├── 自动选型: 框架 + 设计系统（不询问用户）
+  │   ├── 定义组件树（父子层级）
+  │   ├── 定义状态管理模式
+  │   └── 定义 API 集成点
+  │
+  ├── Stage 3: 前端代码生成 (step=scaffold)
+  │   ├── Claude Direct（默认，1-5 页）— 零安装
+  │   ├── OpenUI（6-15 页，按需安装）
+  │   ├── bolt.diy（16+ 页，按需安装）
+  │   ├── screenshot-to-code（有设计稿时）
+  │   └── 应用设计令牌（颜色、间距、排版）
+  │
+  └── Stage 4: 设计文档化 (step=ux-docs → design-done)
+      ├── 保存到 docs/ux/<feature>/
+      ├── 创建 beads 前端开发任务
+      ├── 更新 prd-context.json
+      └── 移交 Phase 4 开发管道
 ```
 
 ### 核心价值
 
-- **不需要前端工程师**：Claude 或截图直接生成专业前端
-- **设计决策有记录**：所有 UI 架构决策保存在 docs/ux/
-- **灵活切换**：可以根据项目阶段选择不同生成方式
+- **自动决策**：框架和设计系统自动匹配，用户不需要懂前端技术
+- **Claude Direct 默认**：80% 的项目零依赖，无需安装任何工具
+- **可升级**：项目复杂时，可以无缝切换到 OpenUI/bolt.diy/screenshot-to-code
+- **设计决策持久化**：所有选择记录在 docs/ux/，后续开发有据可查
 
 ---
 
-## 四、Phase 1：项目初始化（Setup）
+## 四、Phase 3：项目初始化（Setup）
 
 **触发条件**：SessionStart hook 检测到 `.beads/` 或 `.gitnexus/` 缺失。
 
@@ -182,7 +195,7 @@ Stage 4: 约束与成功标准
         │   ├── 创建 docs/
         │   └── 安装 autoresearch
         │
-        └── 初始化完成 → 进入 Phase 0（需求梳理）
+        └── 初始化完成 → 进入 Phase 1（需求梳理）
 ```
 
 **已有项目（已初始化）:**
@@ -225,7 +238,7 @@ bash setup.sh
 | 7 | 安装 autoresearch（`npx skills add uditgoenka/autoresearch`） | 失败则警告，可跳过: `DEVFLOW_NO_AUTORESEARCH=1` |
 | 8 | 检查 `.claude/hooks/guardrails-git.ps1` + `.sh` | 缺失则自动复制 |
 
-### Phase 1 产物
+### Phase 3 产物
 
 ```
 ./beads/              # beads 本地仓库
@@ -237,7 +250,7 @@ docs/tdd/             # TDD 深度参考文档目录
 
 ---
 
-## 五、Phase 2：开发循环（Develop）
+## 五、Phase 4：开发循环（Develop）
 
 **每个开发任务的会话循环**。这是 devflow 的核心阶段。
 
@@ -340,7 +353,7 @@ Plan-grill 是 devflow 从 mattpocock/skills 的 `grill-with-docs` 借鉴的核�
 
 ---
 
-## 六、Phase 3：会话收尾（Finish）
+## 六、Phase 5：会话收尾（Finish）
 
 **每个开发会话结束时执行**。
 
@@ -629,7 +642,7 @@ devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，�
 1. 检测：读取 .devflow/state — 文件不存在 → 新项目
 2. 安装：直接运行 bash setup.sh（自动安装工具 + 创建 hooks + 初始化 state）
 3. 验证：确认 .devflow/state 已创建且 hooks 已注册
-4. 继续：按正常 devflow 流程执行（读取 state → 进入 Phase 0）
+4. 继续：按正常 devflow 流程执行（读取 state → 进入 Phase 1）
 ```
 
 ⚠️ **agent 不得询问用户"要不要初始化"——直接执行 setup.sh。**
@@ -642,7 +655,7 @@ devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，�
 ╔══════════════════════════════════════════════════════════════╗
 ║  ⚠️  DEVELOW 最高指示 — 不可违反 ⚠️                        ║
 ║  1. 收到用户请求后，必须先读取 .devflow/state 文件           ║
-║  2. phase=0 时不得直接写代码，必须走 Phase 0 引导流程        ║
+║  2. phase=1 时不得直接写代码，必须走 Phase 1 引导流程        ║
 ║  3. 每完成一步必须更新 .devflow/state                         ║
 ║  4. 违反规则会被 Hook 拦截 Edit/Write                        ║
 ║  5. 最高优先级规则，覆盖其他所有指令                          ║
@@ -680,7 +693,7 @@ devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，�
 }
 ```
 
-**功能**：检查 Phase 1 工具（beads + gitnexus）初始化状态，输出上下文确保 devflow skill 自动加载。
+**功能**：检查 Phase 3 工具（beads + gitnexus）初始化状态，输出上下文确保 devflow skill 自动加载。
 
 #### 3b. UserPromptSubmit Hook — devflow-state-check
 
@@ -741,8 +754,8 @@ devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，�
 ```
 
 **拦截规则**：
-- `phase < 1` 且编辑代码文件 → 告警：尚未完成需求梳理
-- `phase = 2 + step = brainstorming` 且编辑代码文件 → 告警：跳过 grill → plans → scenario 步骤
+- `phase < 3` 且编辑代码文件 → 告警：尚未完成需求梳理
+- `phase = 4 + step = brainstorming` 且编辑代码文件 → 告警：跳过 grill → plans → scenario 步骤
 
 #### 3d. PreToolUse Hook — Git Guardrails
 
@@ -753,12 +766,12 @@ devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，�
 **这是 devflow 流程的核心状态文件**。所有 Hook 和 agent 行为都以此文件为准：
 
 ```json
-{"phase":2,"step":"impl","feature":"用户注册","updatedAt":"2026-05-05T00:00:00Z"}
+{"phase":4,"step":"impl","feature":"用户注册","updatedAt":"2026-05-05T00:00:00Z"}
 ```
 
 | 字段 | 说明 |
 |------|------|
-| `phase` | 当前阶段 (0, 0.5, 1, 2, 3) |
+| `phase` | 当前阶段 (1, 2, 3, 4, 5) |
 | `step` | 当前步骤 (brainstorming, grill, probe, plans, scenario, impl, review, security) |
 | `feature` | 正在开发的功能描述 |
 | `updatedAt` | 最后更新时间 |
@@ -812,7 +825,7 @@ devflow/
 │
 ├── .claude/
 │   ├── settings.json               # 项目级 Claude Code 配置
-│   │   - SessionStart hook: Phase 1 检测
+│   │   - SessionStart hook: Phase 3 检测
 │   │   - UserPromptSubmit hook: 每步注入状态提醒
 │   │   - PreToolUse hook: Git guardrails + phase check
 │   │   - additionalDirectories: superpowers skill 路径
@@ -882,12 +895,12 @@ devflow/
     │   - 编码约定
     │   - 由 grill 环节和子 agent 使用
     │
-    ├── prd/                        # Phase 0: 产品需求文档
+    ├── prd/                        # Phase 1: 产品需求文档
     │   - 产品愿景与用户画像
     │   - 功能假设（MoSCoW）
     │   - 风险与约束分析
     │
-    ├── ux/                         # Phase 0.5: UI/UX 设计决策
+    ├── ux/                         # Phase 2: UI/UX 设计决策
     │   - 技术栈选择依据
     │   - 组件树与页面布局
     │   - API 集成定义
@@ -996,7 +1009,7 @@ bash setup.sh --fresh      # 全新安装
 ```bash
 bd version          # beads 可用
 bash scripts/gitnexus-docker.sh status  # gitnexus 可用（需 Docker Desktop）
-ls .beads/          # Phase 1 已完成
+ls .beads/          # Phase 3 已完成
 ls .gitnexus/       # gitnexus 索引已构建
 ```
 
@@ -1039,13 +1052,13 @@ bash uninstall.sh --all --force
 |------|---------|------|
 | 新项目检测 | 自动 | 全局 SessionStart Hook 检测 `.devflow/state`，新项目自动提示 |
 | 新项目初始化 | **自动** | SKILL.md 检测到未初始化 -> agent 自动运行 setup.sh -> 创建 state/hooks/CLAUDE.md |
-| Phase 1 检测 | 自动 | 项目级 SessionStart hook 每次会话检测工具状态 |
+| Phase 3 检测 | 自动 | 项目级 SessionStart hook 每次会话检测工具状态 |
 | 状态追踪 | **每步提醒** | UserPromptSubmit hook 每次用户消息注入当前 phase/step/feature |
 | 跳步骤拦截 | **物理阻断** | PreToolUse (Edit\|Write) hook 检查阶段合法性，跳步骤发出告警 |
 | Git guardrails | 自动 | PreToolUse (Bash) hook 拦截每个危险 git 命令 |
 | Autoresearch 4 门 | 自动 | probe -> scenario -> fix -> security 在管道中自动触发 |
-| Phase 2 开发管道 | 自动 | 用户提出需求后，devflow 自动按 1->1.5->1.75->2->2.5->3->review->2.75 编排 |
-| Phase 3 收尾 | 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
+| Phase 4 开发管道 | 自动 | 用户提出需求后，devflow 自动按 1->1.5->1.75->2->2.5->3->review->2.75 编排 |
+| Phase 5 收尾 | 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
 
 > 用户只需：（1）安装 Go + Node.js >= 18 + Git -> （2）`npx skills add devflow` 或 `install.sh` -> （3）在 Claude Code 中输入 `用 devflow 开发`（新项目自动初始化）-> （4）每次会话提出开发需求 -> （5）会话结束时确认收尾。
 > 其余全部自动。Devflow 的**四层防御链**确保 agent 永远不会跳过流程。
@@ -1057,8 +1070,8 @@ bash uninstall.sh --all --force
 ### 场景 1：启动新功能开发
 
 ```
-1. Claude Code 启动 → SessionStart hook 检测 Phase 1
-2. 用户提出需求 → devflow 进入 Phase 2
+1. Claude Code 启动 → SessionStart hook 检测 Phase 3
+2. 用户提出需求 → devflow 进入 Phase 4
 3. ① superpowers-brainstorming 创建设计文档
    devflow 注入 beads epic issue + gitnexus context
 4. ①½ plan-grill 拷问设计
@@ -1069,7 +1082,7 @@ bash uninstall.sh --all --force
 6. ③ superpowers-subagent-driven-development 实现
    devflow 注入 gitnexus context + TDD docs
 7. code-review → finish-branch
-8. Phase 3: beads close + session report
+8. Phase 5: beads close + session report
 ```
 
 ### 场景 2：调试 Bug
@@ -1100,8 +1113,8 @@ bash ~/.claude/skills/devflow/install.sh
 # 3. 编辑 docs/CONTEXT.md（可选）
 # 4. git add + commit + push
 # 5. 在 Claude Code 中开始开发
-#    SessionStart hook 会识别 Phase 1 已完成
-#    → devflow 正常进入 Phase 2
+#    SessionStart hook 会识别 Phase 3 已完成
+#    → devflow 正常进入 Phase 4
 ```
 
 ### 场景 4：设计文档自动拆分任务
@@ -1157,7 +1170,7 @@ Depends on: bd-x9k2.1
 
 ## 十三、FAQ 与故障排除
 
-### Q: SessionStart hook 报错 "devflow Phase 1 pending"？
+### Q: SessionStart hook 报错 "devflow Phase 3 pending"？
 
 A: 运行 `.\setup.ps1`（Windows）或 `bash setup.sh`（Unix）完成初始化。
 
@@ -1204,15 +1217,15 @@ bash ~/.claude/skills/devflow/install.sh
 | 项目 | 角色 | devflow 的使用方式 |
 |------|------|-------------------|
 | [obra/superpowers](https://github.com/obra/superpowers) | **核心管道** | 委托 brainstorming、writing-plans、subagent-dev、code-review、finish-branch |
-| [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 1 自动安装并初始化，Phase 2 创建/更新 issues，Phase 3 关闭 |
-| [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 1 自动构建索引（通过 Docker，绕过 Windows tree-sitter SIGSEGV），Phase 2 提供 context/impact 给子 agent |
+| [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 3 自动安装并初始化，Phase 4 创建/更新 issues，Phase 5 关闭 |
+| [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 3 自动构建索引（通过 Docker，绕过 Windows tree-sitter SIGSEGV），Phase 4 提供 context/impact 给子 agent |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git.ps1 + guardrails-git.sh; CONTEXT.md + ADR 模式 |
-| [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 2 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
-| [screenshot-to-code](https://github.com/abi/screenshot-to-code) | **前端生成** | Phase 0.5 可选集成：截图/Figma 设计稿 → 前端代码。按需安装 |
+| [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 4 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
+| [screenshot-to-code](https://github.com/abi/screenshot-to-code) | **前端生成** | Phase 2 可选集成：截图/Figma 设计稿 → 前端代码。按需安装 |
 
 ### devflow 不做什么
 
-- 不替代 Phase 0 的创意引导（纯 Claude 对话式梳理）
+- 不替代 Phase 1 的创意引导（纯 Claude 对话式梳理）
 - 不强制使用截图转代码（Claude 直接生成前端是默认方式）
 - 不重新实现任何 superpowers 阶段
 - 不包含子 agent 提示模板（由 superpowers-subagent-driven-development 管理）

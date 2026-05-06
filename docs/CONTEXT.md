@@ -6,20 +6,20 @@ devflow — Claude Code 全生命周期产品编排器。5 阶段（Ideate → D
 
 ## Domain Glossary
 
-### Phase 0 (Ideate)
+### Phase 1 (Ideate)
 产品创意梳理阶段。4 阶段自适应探索引擎（问题发现 → 用户场景 → 功能探索 → 约束与标准），探索完成后调用 `to-prd` 技能格式化输出 PRD 到 `docs/prd/` 和 GitHub Issues。自适应机制：已覆盖内容自动跳过。
 
-### Phase 0.5 (Design)
+### Phase 2 (Design)
 前端设计阶段。PRD → 前端脚手架。三种方式：Claude 直接生成（默认）、screenshot-to-code、dyad。
 
-### Phase 1 (Setup)
+### Phase 3 (Setup)
 项目级一次性初始化。beads init + gitnexus analyze + docs seed + guardrails 配置 + .devflow/state 创建。
 由 setup.ps1/setup.sh 自动执行。新项目中由 SKILL.md 检测并触发。
 
-### Phase 2 (Develop)
+### Phase 4 (Develop)
 会话级开发循环。委托 superpowers 14-skill 管道。devflow 在 7 个注入点加入 beads、gitnexus、grill、autoresearch。
 
-### Phase 3 (Finish)
+### Phase 5 (Finish)
 会话级收尾。beads close 当前会话 issues + git push。
 
 ### beads
@@ -62,8 +62,8 @@ SKILL.md 顶部检测逻辑。`.devflow/state` 不存在 → agent 自动运行 
 
 ### PreToolUse Phase Check
 Edit|Write 操作前的阶段合法性检查。拦截规则：
-- phase < 1 且编辑代码 → 告警"需求梳理未完成"
-- phase=2 + brainstorming 且编辑代码 → 告警"跳过关键步骤"
+- phase < 3 且编辑代码 → 告警"需求梳理未完成"
+- phase=4 + brainstorming 且编辑代码 → 告警"跳过关键步骤"
 
 ### UserPromptSubmit State Reminder
 用户每发一条消息，hook 读取 `.devflow/state` 注入当前状态。Agent 无法忽略此提醒。

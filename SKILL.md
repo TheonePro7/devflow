@@ -1,6 +1,6 @@
 ---
 name: devflow
-description: devflow 5-phase product orchestrator (Ideate → Design → Setup → Develop → Finish). From raw idea to shipped product — wraps superpowers pipeline with beads + gitnexus + autoresearch + screenshot-to-code. Phase 0 (Ideate) and Phase 0.5 (Design) guide users without tech background; Phase 1-3 handle engineering.
+description: devflow 5-phase product orchestrator (Phase 1 Ideate → Phase 2 Design → Phase 3 Setup → Phase 4 Develop → Phase 5 Finish). From raw idea to shipped product — wraps superpowers pipeline with beads + gitnexus + autoresearch + screenshot-to-code. Phase 1 (Ideate) and Phase 2 (Design) guide users without tech background; Phase 3-5 handle engineering.
 ---
 
 # devflow — Development Orchestrator
@@ -17,7 +17,7 @@ description: devflow 5-phase product orchestrator (Ideate → Design → Setup �
    - Windows: bash ~/.claude/skills/devflow/setup.sh
    - 注意：⚠️ 不要问用户"要不要初始化" — 直接执行
 3. 验证：确认 .devflow/state 已创建且 hooks 已注册
-4. 继续：按正常 devflow 流程执行（读取 state → 进入 Phase 0）
+4. 继续：按正常 devflow 流程执行（读取 state → 进入 Phase 1）
 ```
 
 **为什么这是最高优先级：**
@@ -36,7 +36,7 @@ description: devflow 5-phase product orchestrator (Ideate → Design → Setup �
   1. 读取 .devflow/state — 了解当前阶段和步骤
   2. 按 state 执行下一步，禁止跳步骤
   3. 每完成一步 → 更新 state
-  4. 如果用户提出新想法但 state 显示 phase=0 → 必须走 Phase 0 引导
+  4. 如果用户提出新想法但 state 显示 phase=1 → 必须走 Phase 1 引导
 ```
 
 **三层强制执行机制（不可绕过）:**
@@ -51,10 +51,10 @@ Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不�
 
 1. **devflow does not reimplement superpowers phases.** Brainstorming, writing plans, git worktrees, subagent-driven-development, code review, and branch finishing are all delegated to `superpowers-*` skills.
 2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, autoresearch auto-optimization, and **screenshot-to-code frontend generation** are injected at defined points.
-3. **Phase 0 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 0 runs a 4-stage adaptive discovery, then invokes to-prd to produce the final PRD. Phase 0.5 (Design) follows — frontend architecture + UI generation before any backend code.
-4. **Phase 0/0.5 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude drives the 4-stage discovery and invokes to-prd for formatting. Hard gates (grill, autoresearch) apply from Phase 2 onward.
+3. **Phase 1 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 1 runs a 4-stage adaptive discovery, then invokes to-prd to produce the final PRD. Phase 2 (Design) follows — frontend architecture + UI generation before any backend code.
+4. **Phase 1/2 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude drives the 4-stage discovery and invokes to-prd for formatting. Hard gates (grill, autoresearch) apply from Phase 4 onward.
 5. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
-6. **No code without spec sign-off.** Phase 2 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
+6. **No code without spec sign-off.** Phase 4 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
 7. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
 8. **ALL tools are auto-installed.** Never ask the user to install anything. If a tool is missing, install it. See [Auto-Install Rules](#auto-install-rules) below.
 
@@ -65,20 +65,21 @@ Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不�
                             │
        ┌────────────────────┼────────────────────┐
        ▼                    ▼                    ▼
-   Phase 0             Phase 0.5           Phase 1-3
+   Phase 1             Phase 2             Phase 3-5
    Ideate              Design              Setup→Develop→Finish
 
    Idea → PRD          PRD → Frontend      Full-stack dev
        
-   Claude-guided       screenshot-to-code  superpowers pipeline
-   prompting           + dyad              + autoresearch gates
-   + user personas     + UI architecture   + git guardrails
+   Claude-guided       4-stage UI Design    superpowers pipeline
+   prompting           Engine              + autoresearch gates
+   + user personas     + framework match   + git guardrails
+   + to-prd output     + Claude Direct
 ```
 
 ### The 5 Phases
 
 ```
-Phase 0: Ideate (session-level, per-feature)
+Phase 1: Ideate (session-level, per-feature)
   ────────────────────────────────────────
   Goal: Raw idea → structured PRD via adaptive discovery.
   Powered by 4-stage exploration engine + to-prd for output.
@@ -117,34 +118,49 @@ Phase 0: Ideate (session-level, per-feature)
   │  └── Also saves to docs/prd/<feature>.md     │
   └──────────────────────────────────────────────┘
 
-  Phase 0 outputs structured JSON to .devflow/prd-context.json,
+  Phase 1 outputs structured JSON to .devflow/prd-context.json,
   then invokes to-prd for formatting. End result is a production-
-  ready PRD that feeds into Phase 0.5 (Design) and Phase 2.
+  ready PRD that feeds into Phase 2 (Design) and Phase 4.
 
-Phase 0.5: Design (session-level, per-feature)
+  **HANDOFF: After PRD is done, immediately proceed to ⓪½ — Phase 2
+  UI Design Engine below. Update state: phase=2, step=ui-req.
+  Do NOT skip to Phase 4.**
+
+  **IMPORTANT: After Phase 1 completes — MUST proceed to Phase 2.
+  Do NOT skip directly to Phase 4. Phase 2 is mandatory.**
+
+Phase 2: Design (session-level, per-feature)
   ────────────────────────────────────────────
   Goal: From PRD → production-grade frontend code.
-  Powered by Auto-Designer engine.
+  Powered by 4-stage UI Design Engine.
 
   ┌──────────────────────────────────────────────┐
-  │  AUTO-DESIGNER                               │
+  │  UI DESIGN ENGINE (4-stage)                  │
   │                                              │
-  │  1. Requirements Analysis (Claude-driven)    │
-  │     ├── Classify: landing/admin/social/...    │
-  │     ├── Match framework + design system       │
-  │     └── Score complexity (1-5 small, 6-15    │
-  │         medium, 16+ large)                   │
+  │  Stage 1: UI Requirements Extraction         │
+  │    ├── From PRD → identify pages/screens     │
+  │    ├── Extract user flows & interactions     │
+  │    ├── Identify data display requirements    │
+  │    ├── Auto-classify project type            │
+  │    └── Output: UI Requirements Summary       │
   │                                              │
-  │  2. Complexity Router                        │
-  │     ├── Small  → Claude Direct (built-in)    │
-  │     ├── Medium → OpenUI (on-demand)          │
-  │     ├── Large  → bolt.diy (on-demand)        │
-  │     └── Screenshots → screenshot-to-code     │
+  │  Stage 2: Architecture Blueprint             │
+  │    ├── Select framework + design system      │
+  │    ├── Define component tree structure       │
+  │    ├── Define state management pattern       │
+  │    └── Define API integration points         │
   │                                              │
-  │  3. Unified Post-Processor                   │
-  │     ├── Inject design tokens                 │
-  │     ├── Normalize project structure          │
-  │     └── Create beads dev tasks               │
+  │  Stage 3: Frontend Scaffold Generation       │
+  │    ├── Small (1-5 pages) → Claude Direct     │
+  │    ├── Medium (6-15) → offer OpenUI          │
+  │    ├── Large (16+) → offer bolt.diy          │
+  │    └── Screenshots → screenshot-to-code      │
+  │                                              │
+  │  Stage 4: Design Documentation               │
+  │    ├── Save to docs/ux/<feature-slug>/       │
+  │    ├── Create beads design tasks             │
+  │    ├── Update prd-context.json               │
+  │    └── Update .devflow/state → Phase 3/4     │
   └──────────────────────────────────────────────┘
 
   Framework Matching (AUTOMATIC — no user choice needed):
@@ -202,7 +218,7 @@ Monospace: JetBrains Mono (for code blocks)
 - React + Ant Design: use <ProTable>, <ProForm>, <ProLayout>
 - Next.js: App Router, server components by default, client components only when needed
 
-Phase 1: Setup (project-level, one-time, FULLY AUTOMATIC)
+Phase 3: Setup (project-level, one-time, FULLY AUTOMATIC)
   ────────────────────────────────────────────────────────
   Auto-detect missing tools → auto-install (go install / npm -g)
   → bd init → gitnexus analyze → seed docs/
@@ -222,13 +238,13 @@ Phase 1: Setup (project-level, one-time, FULLY AUTOMATIC)
   Note: gitnexus analyze may fail on Windows/bash (known SIGSEGV).
   The setup script auto-detects Docker and uses it to bypass this issue.
   See scripts/gitnexus-docker.ps1/.sh for manual Docker usage. If
-  Docker is unavailable, Phase 1 continues in degraded mode.
+  Docker is unavailable, Phase 3 continues in degraded mode.
   autoresearch is unaffected.
 
   Skip autoresearch install: run setup.ps1 with --skip-autoresearch
   or set DEVFLOW_NO_AUTORESEARCH=1 before setup.
 
-Phase 2: Develop (session-level, each task)
+Phase 4: Develop (session-level, each task)
   ─────────────────────────────────────────
   Delegates to superpowers pipeline, injects tools AND autoresearch:
 
@@ -266,7 +282,7 @@ Phase 2: Develop (session-level, each task)
   每个注入点先检查 `docker ps`，不可用时推荐安装；
   用户拒绝 → 跳过 gitnexus（非致命，agent 照常工作）。
 
-Phase 3: Finish (project-level, per-session)
+Phase 5: Finish (project-level, per-session)
   ─────────────────────────────────────────
   beads close all session issues
   Report session summary
@@ -284,11 +300,12 @@ Phase 3: Finish (project-level, per-session)
 | `prd` | PRD 文件路径 | "docs/prd/user-registration.md" |
 | `blocker` | 阻塞原因（如有） | "等待设计稿" |
 | `updatedAt` | 最后更新时间 | "2026-05-05T12:00:00Z" |
-| | **Phase 0 steps:** `problem` → `users` → `features` → `constraints` → `prd` |
+| | **Phase 1 steps:** `problem` → `users` → `features` → `constraints` → `prd` |
+| | **Phase 2 steps:** `ui-req` → `arch-decision` → `scaffold` → `ux-docs` → `design-done` |
 
 **更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
 
-**读取规则：** 收到用户消息后先读此文件，判断当前阶段再执行。如果 phase=0 且用户提新想法，走 Phase 0 引导流程。
+**读取规则：** 收到用户消息后先读此文件，判断当前阶段再执行。如果 phase=1 且用户提新想法，走 Phase 1 引导流程。
 
 **Hook 强制执行：**
 - UserPromptSubmit：每步读取 state 注入提醒
@@ -299,9 +316,9 @@ Phase 3: Finish (project-level, per-session)
 
 **Rule: If a tool is missing → install it. Never ask the user.**
 
-### Phase 1 Tools (auto-install)
+### Phase 3 Tools (auto-install)
 
-When devflow detects Phase 1 is pending, follow this sequence:
+When devflow detects Phase 3 is pending, follow this sequence:
 
 ### 1. Install CLI Tools (if missing)
 
@@ -318,7 +335,7 @@ Check each tool with `command -v <name>`. If missing, install:
 
 ### 2. Run Setup Script
 
-After all CLI tools are confirmed `command -v` passes, run the Phase 1 setup:
+After all CLI tools are confirmed `command -v` passes, run the Phase 3 setup:
 
 - **Windows**: Run `.\setup.ps1` from project root
 - **Unix/macOS**: Run `bash setup.sh` from project root
@@ -327,12 +344,12 @@ The setup script handles: `bd init`, `gitnexus analyze`, seeding docs, installin
 
 ### 3. Handle Failures
 
-- `gitnexus analyze` may SIGSEGV on Windows (Node 22 / tree-sitter bug). This is NON-FATAL — Phase 1 continues in "degraded" mode.
+- `gitnexus analyze` may SIGSEGV on Windows (Node 22 / tree-sitter bug). This is NON-FATAL — Phase 3 continues in "degraded" mode.
 - If `go install` fails (Go not installed): ask user to install Go first, then retry
 - If `npm install -g` fails: try with `npx gitnexus` as fallback
 - Report all failures clearly and stop — do NOT silently proceed with missing tools
 
-### Phase 0.5 Tools (on-demand)
+### Phase 2 Tools (on-demand)
 
 These are NOT auto-installed during setup. Install only when the user explicitly needs them:
 
@@ -345,7 +362,7 @@ screenshot-to-code is Python-based and requires a separate terminal/server proce
 
 ## Tool Injection Details
 
-### ⓪ — Phase 0 Ideate Injection
+### ⓪ — Phase 1 Ideate Injection
 
 **Golden rule: Listen first — do NOT jump to solutions.**
 Your job is to explore the problem, not design the product.
@@ -457,37 +474,110 @@ Note: This is Claude-guided collaboration — no HITL gate needed.
       End the full discovery with "Ready to turn this into a PRD?"
 ```
 
-### ⓪½ — Phase 0.5 Design Injection
+### ⓪½ — Phase 2 Design Injection **★ MANDATORY**
 
-After PRD is ready, before any backend code, generate frontend design:
+**After PRD is ready, MUST execute Phase 2 before proceeding to Phase 4. Do NOT skip.**
+
+Update `.devflow/state` to phase=2 at start, then step through each stage:
 
 ```yaml
-Process:
-  1. From PRD → extract UI requirements:
-     - Pages/screens needed
-     - Key user flows & interactions
-     - Data display requirements
-  2. Make tech stack decisions:
-     - Recommend based on project context (React for SPAs, etc.)
-     - Default: HTML + Tailwind CSS (lowest barrier)
-  3. Generate frontend architecture:
-     - Component tree
-     - Page layout blueprint
-     - State management pattern
-     - API integration points
-  4. Generate frontend code (choose strategy):
-     - User has screenshots → offer screenshot-to-code installation
-     - User has no designs → Claude generates directly
-     - User wants prompt-to-UI → offer dyad (npx dyad)
-  5. Output:
-     - Frontend scaffold (components, pages, styles)
-     - API integration stubs linked to backend spec
-     - docs/ux/<feature-slug>/ with design decisions
+Phase 2: UI Design Engine (4-stage executable flow)
+  State: phase=2, step=ui-req
 
-Default: Claude generates the frontend directly using the chosen
-         tech stack. screenshot-to-code is for screenshot/Figma
-         conversion only.
+  Stage 1: UI Requirements Extraction (step=ui-req)
+    Goal: From PRD → structured UI requirements.
+    Process:
+      1. Read PRD from docs/prd/<feature>.md
+      2. Extract pages/screens needed (list each with purpose)
+      3. Extract key user flows & interactions (step-by-step)
+      4. Extract data display requirements (tables, charts, forms, lists)
+      5. Auto-classify project type:
+         - landing / admin / social / ecommerce / tool / content / mobile
+      6. Show user: "Here's what I understand about the UI needs..."
+      7. Wait for confirmation before proceeding
+    Edge case: User says "no UI needed" (CLI/API project):
+      → Skip Phase 2 entirely. Set state to phase=4.
+      → Create beads epic issue, proceed to Phase 4 pipeline.
+    Edge case: User has screenshots/Figma:
+      → Note it for Stage 3 (screenshot-to-code option)
+    Output: Structured UI requirements (appended to prd-context.json)
+
+  Stage 2: Architecture Blueprint (step=arch-decision)
+    Goal: Select stack and define structure.
+    Process:
+      1. Select framework + design system from matching table:
+         | Type       | Framework              | Design System  |
+         |------------|-----------------------|----------------|
+         | landing    | Next.js + Tailwind     | Tailwind UI    |
+         | admin      | React + Ant Design     | Ant Design Pro |
+         | social     | Next.js + Tailwind     | shadcn/ui      |
+         | ecommerce  | Next.js + Tailwind     | shadcn/ui      |
+         | tool       | React + Tailwind       | shadcn/ui      |
+         | content    | Next.js + Tailwind+MDX | Tailwind UI    |
+         | mobile     | React Native+NativeWind| NativeWind     |
+         Do NOT ask user — decide automatically.
+      2. Define component tree (parent → children hierarchy)
+      3. Define state management: Context / Zustand / Redux / React Query
+      4. Define API integration points per page
+      5. Show blueprint: "Here's the architecture I propose..."
+      6. Wait for confirmation
+    Edge case: Existing project has a stack already:
+      → Respect existing tech stack. Don't suggest a new one.
+      → Only add new components, don't restructure.
+    Output: Architecture blueprint → save to docs/ux/<feature>/architecture.md
+
+  Stage 3: Frontend Scaffold Generation (step=scaffold)
+    Goal: Generate frontend code from the blueprint.
+    Process:
+      1. Count pages from Stage 1 → determine complexity:
+         - 1-5 pages  → Claude Direct (DEFAULT, zero install)
+         - 6-15 pages → Ask user: "This has X pages, want to use OpenUI?"
+         - 16+ pages  → Ask user: "Large project, want to use bolt.diy?"
+         - Has screenshots → Ask: "Want to use screenshot-to-code?"
+      2. Claude Direct (80% of projects):
+         a. Create project directory (if not existing):
+            - For new: scaffold with chosen framework
+            - For existing: add to appropriate directory
+         b. Generate components page by page:
+            - Apply design tokens (colors, spacing, typography from templates below)
+            - Follow chosen design system primitives
+            - Generate responsive layouts
+         c. Generate API integration stubs:
+            - Match to backend spec from PRD
+            - Use fetch/axios with typed interfaces
+         d. Generate routes/navigation structure
+      3. Apply design tokens:
+         - Color palette from brand color (#1677ff default)
+         - Spacing scale (Tailwind-compatible)
+         - Typography (Inter / Plus Jakarta Sans)
+      4. Show user the generated frontend
+      5. Wait for feedback, iterate if needed
+    Edge case: User wants a specific framework not in the table:
+      → Use whatever the user specifies. Framework matching is a default, not a constraint.
+    Output: Frontend scaffold code + API stubs
+
+  Stage 4: Design Documentation & Handoff (step=ux-docs → design-done)
+    Goal: Persist decisions and prepare for Phase 4.
+    Process:
+      1. Create docs/ux/<feature-slug>/ with:
+         - README.md: design decisions summary
+         - architecture.md: component tree, state management, API points
+         - screens.md: per-page description and component mapping
+      2. Update .devflow/prd-context.json:
+         Add design section: { "design": { "techStack": "...",
+           "componentTree": [...], "pages": [...], "apiPoints": [...] } }
+      3. Create beads tasks for remaining frontend work:
+         bd create --title="<feature> frontend" --type=epic
+         bd create --title="Implement <component>" --parent=<epic> --type=task (per component)
+      4. Update .devflow/state:
+         phase=4 (or phase=3 if not yet initialized)
+         step=pipeline-entry
+      5. Confirm with user: "Frontend design complete. Ready to enter the
+         development pipeline."
 ```
+
+Note: This is Claude-guided — no HITL gates. The user confirms each stage.
+If the project is CLI-only / API-only / library (no UI), skip Phase 2 entirely.
 
 ### ① — Brainstorming Injection
 
@@ -713,8 +803,8 @@ devflow/
 │   ├── CONTEXT.md
 │   ├── adr/
 │   ├── tdd/
-│   ├── prd/              # Phase 0: Product Requirements Documents
-│   └── ux/               # Phase 0.5: Design decisions & UI specs
+│   ├── prd/              # Phase 1: Product Requirements Documents
+│   └── ux/               # Phase 2: Design decisions & UI specs
 └── docs/superpowers/specs/
 ```
 
@@ -729,7 +819,7 @@ Users need only these base dependencies (devflow auto-installs everything else):
 - **Go** (for beads) — `winget install GoLang.Go 2.0` or https://go.dev/dl/
 - **Node.js ≥ 18** + **npm** (for gitnexus, autoresearch)
 - **Git**
-- **Python 3.7+** (optional, only for screenshot-to-code in Phase 0.5)
+- **Python 3.7+** (optional, only for screenshot-to-code in Phase 2)
 
 Everything else — beads (bd), gitnexus, superpowers skills, autoresearch — is **auto-installed** by devflow during Phase 1. No manual npm install -g or go install needed.
 
@@ -737,7 +827,7 @@ Everything else — beads (bd), gitnexus, superpowers skills, autoresearch — i
 
 ```bash
 # No manual setup needed. Just open the project in Claude Code.
-# SessionStart hook detects Phase 1 → agent auto-installs everything.
+# SessionStart hook detects Phase 3 → agent auto-installs everything.
 ```
 
 If you want to run setup manually (not recommended):
@@ -756,7 +846,7 @@ When the user proposes a new task mid-pipeline (e.g., during implementation ③)
 
 | If the request is... | Then... |
 |----------------------|---------|
-| A brand new idea (Phase 0 entry) | **Start from Phase 0.** Guide idea exploration → PRD → Phase 0.5 (design) → Phase 1-3 pipeline. Do NOT skip to brainstorming. |
+| A brand new idea (Phase 1 entry) | **Start from Phase 1.** Guide idea exploration → PRD → Phase 2 (design) → Phase 3-5 pipeline. Do NOT skip to brainstorming. |
 | A small tweak within current scope (rename, minor UI adjust, error message) | Handle inline via current subagent — no re-entry |
 | A logical sub-task missed during writing-plans (e.g., "also need a validation layer") | Create a beads sub-task, run autoresearch:fix gate on it. Do NOT restart pipeline |
 | A genuinely new feature unrelated to current work | Record as beads issue, defer to next session. Do NOT interrupt current pipeline |
@@ -782,9 +872,9 @@ When the user proposes a new task mid-pipeline (e.g., during implementation ③)
 ```
 ③ implementation in progress
     │
-    ── user: "new idea" ──→ ⓪ Phase 0 (explore idea)
+    ── user: "new idea" ──→ ⓪ Phase 1 (explore idea)
                                 │
-                                └── ⓪½ Phase 0.5 (design frontend if needed)
+                                └── ⓪½ Phase 2 (design frontend if needed)
                                        │
                                        └── Previous work paused, new work begins
                                               Phase 1-3 for the new feature

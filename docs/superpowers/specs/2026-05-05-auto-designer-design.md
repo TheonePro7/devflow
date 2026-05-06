@@ -1,8 +1,8 @@
-# Phase 0.5 Auto-Designer — Design Spec
+# Phase 2 Auto-Designer — Design Spec
 
 ## Overview
 
-Auto-Designer 是 devflow Phase 0.5（Design）的核心增强模块。它将用户模糊的前端需求转化为专业级项目代码，自动匹配框架和设计系统，按项目复杂度选择最佳生成引擎。
+Auto-Designer 是 devflow Phase 2（Design）的核心增强模块。它将用户模糊的前端需求转化为专业级项目代码，自动匹配框架和设计系统，按项目复杂度选择最佳生成引擎。
 
 ## Architecture
 
@@ -36,7 +36,7 @@ User Input (natural language)
 └──────────────────────────────────────┘
                │
                ▼
-       Ready for Phase 2
+       Ready for Phase 4
 ```
 
 ## Requirements Analyzer
@@ -114,7 +114,7 @@ Every generator output goes through this pipeline:
 1. **Design Token Injection**: Apply consistent color palette, spacing, typography
 2. **Project Structure Normalization**: Ensure standard React/Next.js directory layout
 3. **Beads Task Registration**: Auto-create dev tasks from generated pages/components
-4. **Integration Stubs**: Add API call patterns matching devflow's Phase 2 conventions
+4. **Integration Stubs**: Add API call patterns matching devflow's Phase 4 conventions
 
 ## On-Demand Install Strategy
 
@@ -137,13 +137,13 @@ Installation is triggered by user confirmation:
 
 | File | Change |
 |------|--------|
-| `SKILL.md` | Add Phase 0.5 Auto-Designer section with routing logic |
+| `SKILL.md` | Add Phase 2 Auto-Designer section with routing logic |
 | `setup.sh` / `setup.ps1` | Add `--with-designer` flag for pre-installing optional generators |
 | `scripts/` | New `auto-designer.sh` / `auto-designer.ps1` as the orchestrator entry point |
 
 ## Non-Goals
 
-- Not replacing Phase 2 superpowers pipeline (generated frontend still goes through dev → review → finish)
+- Not replacing Phase 4 superpowers pipeline (generated frontend still goes through dev → review → finish)
 - Not maintaining our own component library (delegate to Ant Design / shadcn/ui / Tailwind)
 - Not generating backend code (bolt.diy generates full-stack, but we only consume the frontend output)
 - Not modifying user's existing project without explicit confirmation

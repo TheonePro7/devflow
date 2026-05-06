@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Initialize devflow workflow in a project (Phase 1 Setup).
+# Initialize devflow workflow in a project (Phase 3 Setup).
 # Auto-installs tools, initializes beads + gitnexus, seeds docs, registers guardrails.
 # Supports merge mode (default) — detects and merges existing configs.
 #
@@ -36,7 +36,7 @@ if [ "$FRESH" = true ]; then
   MERGE_MODE=false
 fi
 
-echo -e "${CYAN}=== devflow setup (Phase 1) ===${NC}"
+echo -e "${CYAN}=== devflow setup (Phase 3) ===${NC}"
 if [ "$MERGE_MODE" = true ]; then
   echo -e "${GRAY}  mode: merge (idempotent) — existing configs will be preserved and extended.${NC}"
 else
@@ -182,7 +182,7 @@ else
 fi
 if [ ! -f .devflow/state ]; then
   cat > .devflow/state << 'STATE'
-{"phase":0,"step":"","feature":"","prd":"","blocker":"","updatedAt":"2026-05-05T00:00:00Z"}
+{"phase":1,"step":"","feature":"","prd":"","blocker":"","updatedAt":"2026-05-05T00:00:00Z"}
 STATE
   echo -e "${GREEN}[PASS] .devflow/state initialized${NC}"
 else
@@ -318,13 +318,13 @@ fi
 echo ""
 echo -e "${CYAN}=== devflow ready ===${NC}"
 if [ "$GITNEXUS_OK" = true ]; then
-  echo -e "${GRAY}  phase 1:  beads + gitnexus + docs + guardrails + autoresearch + merge helpers${NC}"
+  echo -e "${GRAY}  phase 3:  beads + gitnexus + docs + guardrails + autoresearch + merge helpers${NC}"
 else
-  echo -e "${YELLOW}  phase 1:  beads + docs + guardrails + autoresearch (gitnexus: DEGRADED)${NC}"
+  echo -e "${YELLOW}  phase 3:  beads + docs + guardrails + autoresearch (gitnexus: DEGRADED)${NC}"
 fi
 echo -e "${GRAY}  scripts:   merge-settings, merge-guardrails, merge-gitignore, merge-docs, check-superpowers${NC}"
 echo -e "${GRAY}  merge:     existing configs detected and extended (default mode)${NC}"
-echo -e "${GRAY}  phase 2:   superpowers-* pipeline + grill + 4 autoresearch gates${NC}"
+echo -e "${GRAY}  phase 4:   superpowers-* pipeline + grill + 4 autoresearch gates${NC}"
 echo -e "${GRAY}  opt-out:   export DEVFLOW_NO_AUTORESEARCH=1  (disable all auto gates)${NC}"
 echo ""
 echo -e "${GREEN}Start a dev task in Claude Code — devflow auto-triggers.${NC}"

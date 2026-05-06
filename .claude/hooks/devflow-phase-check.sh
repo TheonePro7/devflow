@@ -21,18 +21,19 @@ FEATURE=$(jq -r '.feature // ""' "$STATE_FILE")
 FILE_PATH=$(jq -r '.tool_input.file_path // ""')
 
 # Only check for code files (exclude .devflow/, .claude/, docs/)
-if [ "$PHASE" -lt 1 ] 2>/dev/null; then
-    # Phase 0 or 0.5 — check if editing a code file
-    if echo "$FILE_PATH" | grep -qE '\.(js|ts|py|go|rs|rb|php|c|cpp|h|hpp|java|kt|swift)$'; then
+if [ "$PHASE" = "1" ] || [ "$PHASE" = "2" ]; then
+    # Phase 1 — code editing is not allowed
+    # Phase 2 — frontend code generation is allowed (Stage 3)
+    if [ "$PHASE" = "1" ] && echo "$FILE_PATH" | grep -qE '\.(js|ts|py|go|rs|rb|php|c|cpp|h|hpp|java|kt|swift)$'; then
         cat <<JSON
-{"systemMessage": "⚠️ devflow 流程提醒: 当前 Phase $PHASE（$STEP），尚未完成需求梳理。正在尝试修改代码文件。建议先完成 Phase 0 流程。如需继续请确认。", "continue": true}
+{"systemMessage": "⚠️ devflow 流程提醒: 当前 Phase 1（$STEP），需求梳理阶段不应直接写代码。请先完成 Phase 1 输出 PRD。", "continue": true}
 JSON
         exit 0
     fi
 fi
 
-# Check for skipping steps — if in Phase 2 but jumping to implementation without plan
-if [ "$PHASE" -eq 2 ] && [ "$STEP" = "brainstorming" ]; then
+# Check for skipping steps — if in Phase 4 but jumping to implementation without plan
+if [ "$PHASE" -eq 4 ] && [ "$STEP" = "brainstorming" ]; then
     if echo "$FILE_PATH" | grep -qE '\.(js|ts|py|go)$'; then
         cat <<JSON
 {"systemMessage": "⚠️ devflow 流程提醒: 当前在 brainstorming 阶段，直接写代码会跳过 grill → plans → scenario 等步骤。请完成当前阶段后再开始实现。", "continue": true}

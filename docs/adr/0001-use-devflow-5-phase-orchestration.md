@@ -21,23 +21,23 @@ they wanted to build and had the skills to build it.
 
 Expand from 3 to 5 phases:
 
-- **Phase 0 (Ideate)**: Claude-guided idea exploration → PRD
+- **Phase 1 (Ideate)**: Claude-guided idea exploration → PRD
   - Structured questioning (target users, problem, existing solutions)
   - User personas, feature hypotheses (MoSCoW), risk analysis
   - No external tools — pure Claude conversation
-- **Phase 0.5 (Design)**: PRD → Frontend scaffold
+- **Phase 2 (Design)**: PRD → Frontend scaffold
   - Claude direct generation (default) for most projects
   - screenshot-to-code integration for screenshot/Figma → code conversion
   - Component tree, UI architecture, API integration stubs
-- **Phase 1 (Setup)**: Unchanged from 3-phase — beads + gitnexus + guardrails
-- **Phase 2 (Develop)**: Unchanged from 3-phase — superpowers pipeline
-- **Phase 3 (Finish)**: Unchanged from 3-phase — beads close + session report
+- **Phase 3 (Setup)**: Unchanged from 3-phase — beads + gitnexus + guardrails
+- **Phase 4 (Develop)**: Unchanged from 3-phase — superpowers pipeline
+- **Phase 5 (Finish)**: Unchanged from 3-phase — beads close + session report
 
 Key integration details:
-- Phase 0/0.5 are Claude-guided (not HITL gates) — no grill required
+- Phase 1/2 are Claude-guided (not HITL gates) — no grill required
 - screenshot-to-code is installed on-demand, not auto-installed
-- PRD from Phase 0 feeds directly into Phase 2's brainstorming
-- Frontend scaffold from Phase 0.5 sets up the UI layer for Phase 2 backend integration
+- PRD from Phase 1 feeds directly into Phase 4's brainstorming
+- Frontend scaffold from Phase 2 sets up the UI layer for Phase 4 backend integration
 
 ## Addendum 1: GitNexus SIGSEGV Exception (2026-05-05)
 
@@ -45,7 +45,7 @@ Dogfooding revealed that `gitnexus analyze` segfaults (SIGSEGV, exit 139) on
 Windows/bash with Node 22 due to a tree-sitter native module crash. This is an
 upstream issue, not fixable from devflow.
 
-**Decision**: Phase 1 now supports "degraded" mode — if gitnexus analyze fails,
+**Decision**: Phase 3 now supports "degraded" mode — if gitnexus analyze fails,
 the setup script continues with a warning. gitnexus code context will be
 unavailable to subagents until the index is built manually.
 
@@ -64,4 +64,4 @@ hooks coexist. If users prefer no beads hooks, re-run with:
   `bd init --skip-hooks --skip-agents`
 
 **Note**: `bd prime` pre-compact hook improves session persistence for beads data,
-which is complementary to devflow's Phase 3 close flow.
+which is complementary to devflow's Phase 5 close flow.

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Initialize devflow workflow in a project (Phase 1 Setup).
+    Initialize devflow workflow in a project (Phase 3 Setup).
 .DESCRIPTION
     Auto-installs tools, initializes beads + gitnexus, seeds docs, registers guardrails.
     Supports merge mode (default) — detects and merges existing configs.
@@ -20,7 +20,7 @@ param(
 $ErrorActionPreference = "Stop"
 $mergeMode = -not $Fresh.IsPresent
 
-Write-Host "=== devflow setup (Phase 1) ===" -ForegroundColor Cyan
+Write-Host "=== devflow setup (Phase 3) ===" -ForegroundColor Cyan
 if ($mergeMode) {
     Write-Host "  mode: merge (idempotent) — existing configs will be preserved and extended." -ForegroundColor Gray
 } else {
@@ -191,7 +191,7 @@ if (-not (Test-Path $devflowDir)) {
 $stateFile = Join-Path $devflowDir "state"
 if (-not (Test-Path $stateFile)) {
     $initialState = @{
-        phase = 0
+        phase = 1
         step = ""
         feature = ""
         prd = ""
@@ -366,14 +366,14 @@ if (Test-Path ".\scripts\check-superpowers.ps1") {
 Write-Host ""
 Write-Host "=== devflow ready ===" -ForegroundColor Cyan
 if ($gitnexusOk) {
-    Write-Host "  phase 1:  beads + gitnexus + docs + guardrails + autoresearch + merge helpers" -ForegroundColor Gray
+    Write-Host "  phase 3:  beads + gitnexus + docs + guardrails + autoresearch + merge helpers" -ForegroundColor Gray
 } else {
-    Write-Host "  phase 1:  beads + docs + guardrails + autoresearch (gitnexus: DEGRADED)" -ForegroundColor Yellow
+    Write-Host "  phase 3:  beads + docs + guardrails + autoresearch (gitnexus: DEGRADED)" -ForegroundColor Yellow
     Write-Host "            fix: run 'gitnexus analyze . --force' in native PowerShell" -ForegroundColor Gray
 }
 Write-Host "  scripts:   merge-settings, merge-guardrails, merge-gitignore, merge-docs, check-superpowers" -ForegroundColor Gray
 Write-Host "  merge:     existing configs detected and extended (default mode)" -ForegroundColor Gray
-Write-Host "  phase 2:   superpowers-* pipeline + grill + 4 autoresearch gates" -ForegroundColor Gray
+Write-Host "  phase 4:   superpowers-* pipeline + grill + 4 autoresearch gates" -ForegroundColor Gray
 Write-Host "  opt-out:   `$env:DEVFLOW_NO_AUTORESEARCH=1  (disable all auto gates)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Start a dev task in Claude Code - devflow auto-triggers." -ForegroundColor Green

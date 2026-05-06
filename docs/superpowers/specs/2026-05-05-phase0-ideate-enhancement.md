@@ -1,15 +1,15 @@
-# Phase 0 Ideate Enhancement — 结构化 PRD 发现引擎
+# Phase 1 Ideate Enhancement — 结构化 PRD 发现引擎
 
 > **设计文档**
 > 将模糊想法通过结构化探索转化为完整 PRD，输出给 `to-prd` 技能进行格式化。
 
-**Goal:** 增强 devflow Phase 0 (Ideate)，从简单的 4 问题问答升级为 4 阶段自适应结构化探索，产出的结构化上下文直接喂给 `to-prd` 技能生成最终 PRD。
+**Goal:** 增强 devflow Phase 1 (Ideate)，从简单的 4 问题问答升级为 4 阶段自适应结构化探索，产出的结构化上下文直接喂给 `to-prd` 技能生成最终 PRD。
 
 **Architecture:** 4 阶段自适应访谈（问题发现 → 用户场景 → 功能探索 → 约束与标准），每阶段自动判断用户已说清的内容并跳过，只追问模糊地带。探索完成后调用 `to-prd` 技能格式化输出。
 
 **借鉴来源:** `to-prd` (mattpocock/skills) — Deep Module 思维、User Story 格式、"As a <actor>, I want <feature>, so that <benefit>" 模板、领域词汇对齐、ADR 尊重。
 
-**Tech Stack:** 纯 Prompt 工程 — 修改 SKILL.md Phase 0 节。无外部依赖，无额外 LLM 调用。
+**Tech Stack:** 纯 Prompt 工程 — 修改 SKILL.md Phase 1 节。无外部依赖，无额外 LLM 调用。
 
 ---
 
@@ -20,7 +20,7 @@
        │
        ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Phase 0 结构化探索                                      │
+│  Phase 1 结构化探索                                      │
 │                                                          │
 │  Stage 1 ── 问题发现                                      │
 │  │  痛点 → 现状 → 时机 → 竞品                              │
@@ -146,11 +146,11 @@ As a 小店主, I want 一键生成商品海报, so that 不需要请设计师�
 
 ## to-prd 集成
 
-4 阶段探索完成后，Phase 0 将以下结构化上下文传递给 `to-prd` 技能：
+4 阶段探索完成后，Phase 1 将以下结构化上下文传递给 `to-prd` 技能：
 
 ```json
 {
-  "phase": 0,
+  "phase": 1,
   "stage": "complete",
   "outputs": {
     "problemStatement": "...",
@@ -194,13 +194,13 @@ As a 小店主, I want 一键生成商品海报, so that 不需要请设计师�
 
 ## 借鉴 to-prd 经验清单
 
-| to-prd 要素 | 如何在 Phase 0 中使用 |
+| to-prd 要素 | 如何在 Phase 1 中使用 |
 |------------|---------------------|
 | Deep Module 识别 | Stage 3 结束后、调 to-prd 前，提示 Claude 思考"这里是否存在可以抽取为 deep module 的独立功能块" |
 | User Story 格式 | Stage 2-3 全程使用 `As a <actor>, I want <feature>, so that <benefit>` 格式 |
 | 领域词汇对齐 | 探索全程加载 CONTEXT.md，使用项目已有术语 |
 | ADR 尊重 | Stage 4 检查相关 ADR，避免与历史决策冲突 |
-| Do NOT interview | 这条是 to-prd 自用规则——Phase 0 恰恰是 interview 阶段，但 interview 完成后调 to-prd 时不重复采访 |
+| Do NOT interview | 这条是 to-prd 自用规则——Phase 1 恰恰是 interview 阶段，但 interview 完成后调 to-prd 时不重复采访 |
 | Issue tracker 集成 | 保留 to-prd 发 GitHub Issues 的能力，额外存 docs/prd/ 作为本地备份 |
 
 ---
@@ -211,14 +211,14 @@ As a 小店主, I want 一键生成商品海报, so that 不需要请设计师�
 
 | 文件 | 修改内容 |
 |------|---------|
-| `SKILL.md:81-100` | 替换 Phase 0 节为新的 4 阶段设计 + to-prd 集成流程 |
-| `.devflow/state` | Phase 0 步骤扩展为 `problem` → `users` → `features` → `constraints` → `prd` |
+| `SKILL.md:81-100` | 替换 Phase 1 节为新的 4 阶段设计 + to-prd 集成流程 |
+| `.devflow/state` | Phase 1 步骤扩展为 `problem` → `users` → `features` → `constraints` → `prd` |
 
 ### 不修改文件
 
 | 文件 | 理由 |
 |------|------|
-| `scripts/auto-designer.*` | Phase 0.5 工具，不相关 |
+| `scripts/auto-designer.*` | Phase 2 工具，不相关 |
 | `setup.*` | 无安装变化 |
 | `to-prd` 技能 | 直接调用，不改上游 |
 
@@ -232,4 +232,4 @@ As a 小店主, I want 一键生成商品海报, so that 不需要请设计师�
 | 用户说"我不确定" | 提供选项让用户选，而非让用户填空 |
 | 用户中途改变想法 | 重新从 Stage 1 开始，但保留已确认的信息 |
 | 用户赶时间 | 提供"快速模式"——每阶段只问最关键的一个问题 |
-| 项目没有 CONTEXT.md | Phase 0 自动创建并填充基础词汇 |
+| 项目没有 CONTEXT.md | Phase 1 自动创建并填充基础词汇 |

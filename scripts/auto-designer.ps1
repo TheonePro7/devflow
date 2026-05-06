@@ -1,4 +1,4 @@
-# auto-designer.ps1 — Phase 0.5 Auto-Designer orchestrator (PowerShell)
+# auto-designer.ps1 — Phase 2 Auto-Designer orchestrator (PowerShell)
 # Routes frontend generation requests to the appropriate engine.
 
 param(

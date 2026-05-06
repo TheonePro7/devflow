@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# auto-designer.sh — Phase 0.5 Auto-Designer orchestrator
+# auto-designer.sh — Phase 2 Auto-Designer orchestrator
 # Routes frontend generation requests to the appropriate engine.
 #
 # Usage:

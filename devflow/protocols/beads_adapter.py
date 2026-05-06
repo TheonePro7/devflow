@@ -143,7 +143,10 @@ class BeadsAdapter:
                 try:
                     results = json.loads(out)
                     if isinstance(results, list) and len(results) > 0:
-                        return results[0].get("phase")
+                        title = results[0].get("title", "")
+                        # title 格式: "state:phase-3" → 提取 phase-3
+                        if title.startswith("state:"):
+                            return title[len("state:"):]
                 except (json.JSONDecodeError, KeyError):
                     pass
         local = self._read_local_state()
@@ -208,13 +211,14 @@ class BeadsAdapter:
         return decisions_file.exists()
 
     def _check_tasks_ready(self) -> bool:
-        """至少有一个 ready 状态的 task。"""
+        """至少有一个 open/in_progress 状态的 task。"""
         if self._available:
-            code, out, err = self._run_bd(["list", "--type=task", "--status=ready", "--json"])
+            code, out, err = self._run_bd(["list", "--type=task", "--status=open", "--json"])
             if code == 0 and out.strip():
                 try:
                     data = json.loads(out)
-                    return isinstance(data, list) and len(data) > 0
+                    if isinstance(data, list) and len(data) > 0:
+                        return True
                 except (json.JSONDecodeError, TypeError):
                     pass
         return False

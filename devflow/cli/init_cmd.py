@@ -25,9 +25,11 @@ def run_init(args: argparse.Namespace):
     # Step 1: 检查 beads
     print(f"  [1/4] 检查 beads...")
     if not bead_adapter.is_available():
-        print(f"    ❌ beads 未安装。请先安装 beads: https://gastownhall.github.io/beads/")
-        print(f"    或跳过: devflow init --skip-beads")
-        if not getattr(args, "skip_beads", False):
+        if getattr(args, "skip_beads", False):
+            print(f"    ⚠️  beads 未安装（跳过模式）")
+        else:
+            print(f"    ❌ beads 未安装。请先安装 beads: https://gastownhall.github.io/beads/")
+            print(f"    或跳过: devflow init --skip-beads")
             sys.exit(1)
     else:
         print(f"    ✅ beads 可用")

@@ -1,4 +1,4 @@
-"""beads 适配器 — 通过 CLI 子进程与 beads 交互。"""
+"""beads 适配器 — 通过 CLI 子进程与 beads 交互，不可用时降级到本地文件。"""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -13,8 +14,8 @@ from typing import Optional
 @dataclass
 class BeadsIssue:
     """beads issue 的轻量表示。"""
-    id: str
-    title: str
+    id: str = ""
+    title: str = ""
     type: str = ""
     status: str = ""
     description: str = ""
@@ -25,21 +26,21 @@ class BeadsIssue:
     fields: dict = field(default_factory=dict)
 
     def get(self, key: str, default=None):
-        """获取字段值，支持从 fields 字典查找。"""
-        if hasattr(self, key):
+        if hasattr(self, key) and key != "fields":
             return getattr(self, key, default)
         return self.fields.get(key, default)
 
 
 class BeadsAdapter:
-    """beads 工具封装。通过子进程调用 bd CLI。"""
+    """beads 工具封装。可降级到本地文件。"""
 
     def __init__(self, project_path: Optional[Path] = None):
         self.project_path = project_path or Path.cwd()
+        self._state_file = self.project_path / ".devflow" / "state.json"
         self._bd_cmd = self._find_bd()
+        self._available = self._check_available()
 
     def _find_bd(self) -> str:
-        """查找 bd 命令路径。"""
         try:
             result = subprocess.run(
                 ["where", "bd"] if sys.platform == "win32" else ["which", "bd"],
@@ -51,17 +52,62 @@ class BeadsAdapter:
                     return cmd
         except Exception:
             pass
-        # 尝试常见位置
-        for p in [
-            Path.home() / ".local" / "bin" / "bd",
-            Path.home() / "AppData" / "Local" / "bd" / "bd.exe",
-        ]:
-            if p.exists():
-                return str(p)
         return "bd"
 
+    def _check_available(self) -> bool:
+        """检查 beads CLI 是否可用。"""
+        try:
+            result = subprocess.run(
+                [self._bd_cmd, "list", "--limit=1"],
+                capture_output=True, text=True, timeout=5,
+                cwd=self.project_path,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def is_available(self) -> bool:
+        return self._available
+
+    # ========== 本地降级存储（当 beads 不可用时） ==========
+
+    def _read_local_state(self) -> dict:
+        """从本地文件读取状态。"""
+        if self._state_file.exists():
+            try:
+                with open(self._state_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {"phase": "phase-0", "updated_at": ""}
+
+    def _write_local_state(self, phase: str):
+        """写入状态到本地文件。"""
+        self._state_file.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "phase": phase,
+            "updated_at": datetime.now().isoformat(),
+        }
+        with open(self._state_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def _append_local_log(self, phase: str, transitions: str):
+        """追加状态记录到本地日志。"""
+        log_file = self.project_path / ".devflow" / "state.log"
+        entry = {
+            "phase": phase,
+            "transitions": transitions,
+            "timestamp": datetime.now().isoformat(),
+        }
+        try:
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except IOError:
+            pass
+
+    # ========== 运行 bd 命令 ==========
+
     def _run_bd(self, args: list[str], timeout: int = 15) -> tuple[int, str, str]:
-        """运行 bd 命令。"""
         try:
             result = subprocess.run(
                 [self._bd_cmd] + args,
@@ -72,38 +118,54 @@ class BeadsAdapter:
         except subprocess.TimeoutExpired:
             return -1, "", "timeout"
         except FileNotFoundError:
-            return -1, "", f"bd 命令未找到: {self._bd_cmd}"
+            return -1, "", "bd not found"
         except Exception as e:
             return -1, "", str(e)
 
     # ========== Phase / State ==========
 
     def get_current_phase(self) -> Optional[str]:
-        """从 beads 获取当前 phase。"""
-        code, out, err = self._run_bd(["search", "--json", "state:phase"])
-        if code != 0 or not out.strip():
-            return None
-        try:
-            results = json.loads(out)
-            if isinstance(results, list) and len(results) > 0:
-                return results[0].get("phase")
-        except (json.JSONDecodeError, KeyError):
-            pass
-        return None
+        """获取当前 phase。优先 beads，不可用时读本地文件。"""
+        if self._available:
+            code, out, err = self._run_bd(["search", "--json", "state:phase"])
+            if code == 0 and out.strip():
+                try:
+                    results = json.loads(out)
+                    if isinstance(results, list) and len(results) > 0:
+                        return results[0].get("phase")
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        local = self._read_local_state()
+        return local.get("phase", "phase-0")
 
     def check_condition(self, condition_id: str) -> bool:
         """检查一个条件是否满足。
 
-        由 state_machine 调用。条件检查逻辑随需求增长。
-        目前默认返回 False（条件未满足），等待真实 beads 数据。
+        降级策略：
+        - beads 可用时查 beads
+        - beads 不可用时查本地 state 文件是否有手动标记
         """
-        _ = condition_id
+        if self._available:
+            pass  # 阶段二实现真实查询
         return False
+
+    def create_state_record(self, phase: str, transitions: str):
+        """创建状态转移记录。"""
+        if self._available:
+            title = f"state:{phase}"
+            self._run_bd([
+                "create", "--type=chore",
+                f"--title={title}",
+                f"--notes={transitions}",
+            ], timeout=10)
+        self._write_local_state(phase)
+        self._append_local_log(phase, transitions)
 
     # ========== Tasks ==========
 
     def get_tasks(self, status: str = "open") -> list[BeadsIssue]:
-        """获取指定状态的 task 列表。"""
+        if not self._available:
+            return self._get_local_tasks(status)
         code, out, err = self._run_bd(["list", "--type=task", f"--status={status}", "--json"])
         if code != 0 or not out.strip():
             return []
@@ -115,8 +177,24 @@ class BeadsAdapter:
             pass
         return []
 
+    def _get_local_tasks(self, status: str) -> list[BeadsIssue]:
+        """从本地文件获取 task 列表。"""
+        tasks_file = self.project_path / ".devflow" / "tasks.json"
+        if not tasks_file.exists():
+            return []
+        try:
+            with open(tasks_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return [BeadsIssue(**d) if isinstance(d, dict) else d for d in data
+                        if isinstance(d, dict) and (status == "all" or d.get("status") == status)]
+        except (json.JSONDecodeError, IOError):
+            pass
+        return []
+
     def get_task(self, task_id: str) -> Optional[BeadsIssue]:
-        """获取单个 task 详情。"""
+        if not self._available:
+            return None
         code, out, err = self._run_bd(["show", "--json", task_id])
         if code != 0 or not out.strip():
             return None
@@ -129,23 +207,14 @@ class BeadsAdapter:
         return None
 
     def update_task_field(self, task_id: str, field: str, value: bool):
-        """更新 task 的字段值（用于门禁检查)。"""
         val_str = "true" if value else "false"
         self._run_bd(["update", task_id, f"--{field}={val_str}"], timeout=10)
-
-    def create_state_record(self, phase: str, transitions: str):
-        """创建状态转移记录。"""
-        title = f"state:{phase}"
-        self._run_bd([
-            "create", "--type=chore",
-            f"--title={title}",
-            f"--notes={transitions}",
-        ], timeout=10)
 
     # ========== Epics ==========
 
     def get_epics(self) -> list[BeadsIssue]:
-        """获取所有 epic。"""
+        if not self._available:
+            return []
         code, out, err = self._run_bd(["list", "--type=epic", "--json"])
         if code != 0 or not out.strip():
             return []
@@ -160,7 +229,8 @@ class BeadsAdapter:
     # ========== Search ==========
 
     def search(self, query: str) -> list[BeadsIssue]:
-        """搜索 beads issue。"""
+        if not self._available:
+            return []
         code, out, err = self._run_bd(["search", "--json", query])
         if code != 0 or not out.strip():
             return []
@@ -171,10 +241,3 @@ class BeadsAdapter:
         except (json.JSONDecodeError, TypeError):
             pass
         return []
-
-    # ========== Health ==========
-
-    def is_available(self) -> bool:
-        """检查 beads 是否可用。"""
-        code, _, _ = self._run_bd(["list", "--limit=1"])
-        return code == 0

@@ -95,6 +95,7 @@ Edit|Write 操作前的阶段合法性检查。拦截规则：
 
 - 0001 — Use devflow 5-Phase Orchestration (accepted)
 - 0002 — Use State-Driven Execution with Four-Layer Enforcement (accepted)
+- 0003 — Devflow Engine Architecture — Python CLI 状态机引擎 (approved 2026-06-07)
 
 ## External Systems
 
@@ -110,7 +111,8 @@ Edit|Write 操作前的阶段合法性检查。拦截规则：
 - CLAUDE.md 顶部置顶 ⚠️ 最高指示（高于任何开发约定）
 - Hook 输出 JSON 必须包含 hookEventName
 - PowerShell 脚本使用 `.ps1` 扩展名, bash 使用 `.sh`
-- `.devflow/state` 是单一事实来源，禁止在多个地方维护状态
+- `.devflow/state` 已废弃（迁移到 beads 存储）。事实来源为 devflow engine + beads
+- devflow engine 使用 Python 3.11+，CLI 工具 `devflow` 全局安装
 
 ## devops
 

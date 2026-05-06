@@ -141,13 +141,110 @@ class BeadsAdapter:
     def check_condition(self, condition_id: str) -> bool:
         """检查一个条件是否满足。
 
-        降级策略：
-        - beads 可用时查 beads
-        - beads 不可用时查本地 state 文件是否有手动标记
+        实现所有 Phase 间转移条件的真实检测逻辑。
         """
-        if self._available:
-            pass  # 阶段二实现真实查询
+        if condition_id == "EPIC_EXISTS":
+            return self._check_epic_exists()
+        elif condition_id == "EPIC_HAS_ACCEPTANCE":
+            return self._check_epic_has_field("acceptance")
+        elif condition_id == "EPIC_HAS_DESCRIPTION":
+            return self._check_epic_has_field("description")
+        elif condition_id == "DECISION_EXISTS":
+            return self._check_decision_exists()
+        elif condition_id == "TASKS_CREATED":
+            return self._check_tasks_ready()
+        elif condition_id == "SETUP_SCRIPTS_RUN":
+            return (self.project_path / ".devflow").exists()
+        elif condition_id == "ALL_TASKS_CLOSED":
+            return self._check_all_tasks_closed()
+        elif condition_id == "GIT_PUSHED":
+            return self._check_git_pushed()
         return False
+
+    def _check_epic_exists(self) -> bool:
+        """至少有一个 open 状态的 epic。"""
+        if self._available:
+            code, out, err = self._run_bd(["list", "--type=epic", "--status=open", "--json"])
+            if code == 0 and out.strip():
+                try:
+                    data = json.loads(out)
+                    return isinstance(data, list) and len(data) > 0
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        return False
+
+    def _check_epic_has_field(self, field: str) -> bool:
+        """检查 epic 是否有指定非空字段。"""
+        if not self._available:
+            return False
+        code, out, err = self._run_bd(["list", "--type=epic", "--status=open", "--json"])
+        if code != 0 or not out.strip():
+            return False
+        try:
+            data = json.loads(out)
+            if isinstance(data, list):
+                for epic in data:
+                    val = epic.get(field, "")
+                    if val and val.strip():
+                        return True
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return False
+
+    def _check_decision_exists(self) -> bool:
+        """检查是否有设计决策记录。降级到本地文件。"""
+        decisions_file = self.project_path / ".devflow" / "decisions.json"
+        return decisions_file.exists()
+
+    def _check_tasks_ready(self) -> bool:
+        """至少有一个 ready 状态的 task。"""
+        if self._available:
+            code, out, err = self._run_bd(["list", "--type=task", "--status=ready", "--json"])
+            if code == 0 and out.strip():
+                try:
+                    data = json.loads(out)
+                    return isinstance(data, list) and len(data) > 0
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        return False
+
+    def _check_all_tasks_closed(self) -> bool:
+        """所有 task 都已关闭（没有 open 或 in_progress 状态的 task）。"""
+        if not self._available:
+            return False
+        for status in ("open", "in_progress"):
+            code, out, err = self._run_bd(["list", "--type=task", f"--status={status}", "--json"])
+            if code == 0 and out.strip():
+                try:
+                    data = json.loads(out)
+                    if isinstance(data, list) and len(data) > 0:
+                        return False
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        return True
+
+    def _check_git_pushed(self) -> bool:
+        """检查 git 是否已推送（比较本地和远程，无 upstream 时视为已推送）。"""
+        import subprocess as _sp
+        try:
+            # 先检查有没有 upstream
+            result = _sp.run(
+                ["git", "rev-parse", "--abbrev-ref", "@{u}"],
+                capture_output=True, text=True, timeout=5,
+                cwd=self.project_path,
+            )
+            if result.returncode != 0:
+                # 没有 upstream（新分支），视为已推送
+                return True
+            # 检查未推送的 commit
+            result = _sp.run(
+                ["git", "log", "--oneline", "@{u}..HEAD"],
+                capture_output=True, text=True, timeout=5,
+                cwd=self.project_path,
+            )
+            return result.returncode == 0 and not result.stdout.strip()
+        except Exception:
+            return False
 
     def create_state_record(self, phase: str, transitions: str):
         """创建状态转移记录。"""

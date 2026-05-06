@@ -40,7 +40,7 @@ def run_gate(args: argparse.Namespace):
     elif action == "run-impact-analysis":
         _run_impact_analysis(bead_adapter, task_id, project_path)
     elif action == "run-verification":
-        _run_verification(None, bead_adapter, task_id, project_path)
+        _run_verification(bead_adapter, task_id, project_path)
     elif action == "run-security":
         _run_security(bead_adapter, task_id, project_path)
     elif action == "close":
@@ -165,7 +165,7 @@ def _run_impact_analysis(adapter: BeadsAdapter, task_id: str, project_path: Path
             sys.exit(1)
 
 
-def _run_verification(adapter: BeadsAdapter, task_id: str, project_path: Path, args: argparse.Namespace = None):
+def _run_verification(adapter: BeadsAdapter, task_id: str, project_path: Path):
     """运行验证。"""
     from devflow.protocols.autoresearch_adapter import AutoresearchAdapter
     auto = AutoresearchAdapter(project_path)

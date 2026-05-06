@@ -274,6 +274,9 @@ Phase 4: Develop (session-level, each task)
   code-review           (superpowers native)
   ══ AUTORESEARCH ═══════②¾── security: audit changes before
                                  finish (HARD GATE — hook blocks finish)
+  ══ AUTORESEARCH ═══════③¼── optimize: prompt user for auto-
+                                 optimization goal, run $autoresearch
+                                 loop if they set a target
   finish-branch         (superpowers native)
 
   Background:    Git guardrails block dangerous commands
@@ -284,8 +287,15 @@ Phase 4: Develop (session-level, each task)
 
 Phase 5: Finish (project-level, per-session)
   ─────────────────────────────────────────
-  beads close all session issues
-  Report session summary
+  ①═ AUTORESEARCH OPTIMIZE ════ Ask user: "是否需要运行
+                                 autoresearch 自动优化？
+                                 可设定目标：提高覆盖率、
+                                 优化性能、减少包体积等"
+                                 用户同意 → 引导设置 Goal/
+                                 Scope/Metric → 跑 $autoresearch
+                                 用户拒绝 → 跳过
+  ② beads close all session issues
+  ③ Report session summary
 ```
 
 ## State File — `.devflow/state`
@@ -755,6 +765,47 @@ After completion:
   Update .devflow/state → set gate_security=done, step=finish
 
 Opt-out: Set gate_security=skipped in .devflow/state (user must explicitly request)
+```
+
+### ③¼ — Autoresearch Optimize Prompt ★ INTERACTIVE
+
+After security gate passes, before finishing the branch. **Agent must ask the user before proceeding.**
+
+> This is the only autoresearch step that is INTERACTIVE (user decides), not automatic.
+
+```yaml
+What: Ask the user:
+  "功能已完成并通过所有门禁。是否要运行 autoresearch 自动优化？
+  
+  你可以设定一个优化目标，比如：
+  - 提高测试覆盖率到 XX%
+  - 优化性能（减少响应时间）
+  - 减少包体积
+  - 代码重构改进
+  - 其他自定义目标
+  
+  Claude 会自动迭代改进，直到目标达成。
+  不需要的话直接跳过即可。"
+
+If user agrees → guide them to set Goal + Scope + Metric:
+  Goal: 用户设定的优化目标
+  Scope: 本次变更的文件范围
+  Metric: 可衡量的指标（如覆盖率%、构建通过、包体积KB）
+  Iterations: 建议 10-15 轮
+
+  Then run: $autoresearch
+    Goal: <user goal>
+    Scope: <changed files>
+    Metric: <mechanical metric>
+    Iterations: 10
+
+If user declines → proceed to close and push.
+
+After completion:
+  Keep or revert based on $autoresearch results
+  Proceed to Phase 5 close + push
+
+Opt-out: User says "no" or "skip optimize"
 ```
 
 ### Git Guardrails (Background)

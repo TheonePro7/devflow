@@ -26,7 +26,15 @@
       "Bash(python)",
       "Bash(python _update_section9.py)",
       "Bash(bash scripts/test-guardrails.sh)",
-      "Read(//c/Users/Administrator/.claude/**)"
+      "Read(//c/Users/Administrator/.claude/**)",
+      "Read(//f/AI/memory/.devflow/**)",
+      "Read(//f/AI/cut/.devflow/**)",
+      "Read(//f/AI/note/.devflow/**)",
+      "Read(//f/AI/WekSkill/.devflow/**)",
+      "Read(//f/AI/memory/.claude/**)",
+      "Read(//f/AI/cut/.claude/**)",
+      "Read(//f/AI/note/.claude/**)",
+      "Read(//f/AI/WekSkill/.claude/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
@@ -36,7 +44,15 @@
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-requesting-code-review",
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-finishing-a-development-branch",
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-test-driven-development",
-      "F:\\AI\\devflow\\.claude"
+      "F:\\AI\\devflow\\.claude",
+      "F:\\AI\\memory\\.devflow",
+      "F:\\AI\\cut\\.devflow",
+      "F:\\AI\\note\\.devflow",
+      "F:\\AI\\WekSkill\\.devflow",
+      "F:\\AI\\memory\\.claude",
+      "F:\\AI\\WekSkill\\.claude",
+      "F:\\AI\\cut\\.claude",
+      "F:\\AI\\note\\.claude"
     ]
   },
   "hooks": {

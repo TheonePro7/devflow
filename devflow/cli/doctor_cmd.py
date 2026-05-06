@@ -115,10 +115,23 @@ def _check_gitnexus(path: Path) -> tuple[bool, str]:
 
 
 def _check_autoresearch() -> tuple[bool, str]:
+    # 检查多个安装路径
+    home = Path.home()
+    check_paths = [
+        home / ".claude" / "skills" / "autoresearch" / "SKILL.md",
+        home / ".agents" / "skills" / "autoresearch" / "SKILL.md",
+        Path.cwd() / ".agents" / "skills" / "autoresearch" / "SKILL.md",
+        Path.cwd() / ".claude" / "skills" / "autoresearch" / "SKILL.md",
+    ]
+    for p in check_paths:
+        if p.exists():
+            return True, f"已安装 ({p.parent.name}/skills/autoresearch)"
+    # 后备尝试 npx
     try:
         r = subprocess.run(
             ["npx", "--yes", "skills", "run", "autoresearch", "--help"],
             capture_output=True, text=True, timeout=15,
+            encoding="utf-8", errors="replace",
         )
         if r.returncode == 0:
             return True, "已安装"

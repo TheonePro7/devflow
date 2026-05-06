@@ -11,6 +11,7 @@ from devflow.cli.transition_cmd import run_transition
 from devflow.cli.gate_cmd import run_gate
 from devflow.cli.task_cmd import run_task
 from devflow.cli.init_cmd import run_init
+from devflow.cli.sync_cmd import run_sync
 
 
 def _setup_encoding():
@@ -55,6 +56,10 @@ def main(argv: list[str] | None = None):
                         help="门禁操作")
     p_gate.add_argument("task_id", help="beads task ID")
     p_gate.set_defaults(func=run_gate)
+
+    # sync
+    p_sync = subparsers.add_parser("sync", help="同步各工具状态到 beads")
+    p_sync.set_defaults(func=run_sync)
 
     # task
     p_task = subparsers.add_parser("task", help="任务管理")

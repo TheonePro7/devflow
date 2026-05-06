@@ -34,7 +34,10 @@
       "Read(//f/AI/memory/.claude/**)",
       "Read(//f/AI/cut/.claude/**)",
       "Read(//f/AI/note/.claude/**)",
-      "Read(//f/AI/WekSkill/.claude/**)"
+      "Read(//f/AI/WekSkill/.claude/**)",
+      "Bash(echo \"EXIT: $?\")",
+      "PowerShell(cd f:\\\\AI\\\\devflow; try { $null = Get-Content .claude\\\\settings.json -Raw | ConvertFrom-Json; Write-Output \"settings.json: valid JSON ✅\" } catch { Write-Output \"settings.json: INVALID ❌ - $_\" })",
+      "PowerShell(cd f:\\\\AI\\\\devflow; try { $c = Get-Content .claude\\\\settings.json -Raw -Encoding utf8; $null = [System.Text.Encoding]::UTF8.GetBytes\\($c\\); $obj = $c | ConvertFrom-Json; Write-Output \"settings.json: valid JSON ✅\" } catch { Write-Output \"settings.json: INVALID ❌ - $_\" })"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",

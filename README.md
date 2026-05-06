@@ -276,11 +276,12 @@ docs/tdd/             # TDD 深度参考文档目录
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ ①¾ AUTORESEARCH PROBE ★ 自动                    │
+│ ①¾ AUTORESEARCH PROBE ★ HARD GATE               │
 │   /autoresearch:probe                           │
 │   8 个对抗人格发现隐藏约束和矛盾                │
 │   输出约束报告 → 补充到 plans                   │
-│   跳过: DEVFLOW_NO_AUTORESEARCH=1               │
+│   3 层强制: state + hook + SKILL.md            │
+│   跳过: 设置 gate_probe=skipped                │
 ├─────────────────────────────────────────────────┤
     │
     ▼
@@ -292,10 +293,12 @@ docs/tdd/             # TDD 深度参考文档目录
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ ②½ AUTORESEARCH SCENARIO ★ 自动                 │
+│ ②½ AUTORESEARCH SCENARIO ★ HARD GATE            │
 │   /autoresearch:scenario                        │
 │   为每个任务生成边界案例和错误状态              │
 │   输出测试场景 → 补充 task 描述                 │
+│   3 层强制: state + hook + SKILL.md            │
+│   跳过: 设置 gate_scenario=skipped             │
 ├─────────────────────────────────────────────────┤
     │
     ▼
@@ -304,9 +307,10 @@ docs/tdd/             # TDD 深度参考文档目录
 │   devflow 注入: gitnexus context + beads ready  │
 │   + TDD deep docs                               │
 │   ┌─ 每个任务完成后 ──────────────────────┐     │
-│   │ ★ AUTORESEARCH:FIX 零错误门           │     │
+│   │ ★ AUTORESEARCH:FIX 零错误门 ★ HARD    │     │
 │   │ /autoresearch:fix --target "npm test" │     │
 │   │ 通过后才 claim 下一个任务              │     │
+│   │ 跳过: 设置 gate_fix=skipped           │     │
 │   └────────────────────────────────────────┘     │
 ├─────────────────────────────────────────────────┤
     │
@@ -318,19 +322,28 @@ docs/tdd/             # TDD 深度参考文档目录
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ ②¾ AUTORESEARCH SECURITY ★ 自动                 │
+│ ②¾ AUTORESEARCH SECURITY ★ HARD GATE            │
 │   /autoresearch:security --diff                 │
 │   STRIDE + OWASP Top10 + 红队审计              │
 │   Critical/High 必须修复才能 finish             │
+│   3 层强制: state + hook + SKILL.md            │
+│   跳过: 设置 gate_security=skipped             │
 ├─────────────────────────────────────────────────┤
     │
     ▼
 ┌─────────────────────────────────────────────────┐
 │ superpowers-finishing-a-development-branch      │
 │ (devflow 不参与)                                │
+├─────────────────────────────────────────────────┤
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ PHASE 4→5 HANDOFF                               │
+│ 更新 .devflow/state: phase=5, step=finish       │
+│ 然后进入 Phase 5 close + push                   │
 └─────────────────────────────────────────────────┘
 
-后台运行: Git guardrails PreToolUse hook
+后台运行: Git guardrails PreToolUse hook + 门禁状态检查
 ```
 
 ### Grill 关卡详解
@@ -355,14 +368,16 @@ Plan-grill 是 devflow 从 mattpocock/skills 的 `grill-with-docs` 借鉴的核�
 
 ## 六、Phase 5：会话收尾（Finish）
 
-**每个开发会话结束时执行**。
+**每个开发会话结束时执行**。Phase 4 的 autoresearch optimize 步骤已处理优化，Phase 5 只做轻量收尾。
 
 ### 执行内容
 
-1. **beads close** — 关闭当前会话中创建或更新的所有 beads issues
+1. **更新 .devflow/state** — `phase=5, step=finish → done`
+2. **beads close** — 关闭当前会话中创建或更新的所有 beads issues
    - `bd update <id> --close` (已完成的任务)
    - `bd update <id> --status=wontfix` (不实施的任务)
-2. **Session report** — 生成会话摘要
+3. **git add + git commit + git push** — 提交并推送所有变更
+4. **Session report** — 生成会话摘要
    - 完成的任务列表
    - 未完成的任务及原因
    - 新建或更新的 docs/ 文件
@@ -399,9 +414,9 @@ context:
 
 参见[第三节 Grill 关卡详解](#grill-关卡详解)。
 
-### ①¾ — Autoresearch Probe 注入 ★ 自动
+### ①¾ — Autoresearch Probe 注入 ★ HARD GATE
 
-**时机**：grill 通过后、writing-plans 前。默认自动执行。
+**时机**：grill 通过后、writing-plans 前。**3 层强制不可跳过。**
 
 > 调用 `/autoresearch:probe`，8 个对抗人格（架构师、安全分析师、
 > 性能工程师、可靠性工程师、魔鬼代言人等）独立分析设计后辩论达成共识。
@@ -422,7 +437,8 @@ context:
       两者互补，确保 plans 基于完整的需求理解。
 ```
 
-**跳过方式**：告诉 agent "skip probe" 或设置 `DEVFLOW_NO_AUTORESEARCH=1`。
+**跳过方式**：设置 `gate_probe=skipped` 在 `.devflow/state` 中，或告诉 agent "skip probe"。
+**拦截机制**：PreToolUse hook 在 step=plans 时检查 gate_probe != done 会拦截。
 
 ### ② — Writing Plans 注入
 
@@ -446,9 +462,9 @@ auto-split (PRD→beads):
   - 每个 task 创建为一个 beads issue，自动设置 Depends on 关系
 ```
 
-### ②½ — Autoresearch Scenario 注入 ★ 自动
+### ②½ — Autoresearch Scenario 注入 ★ HARD GATE
 
-**时机**：writing-plans 分解任务后、implementation 前。默认自动执行。
+**时机**：writing-plans 分解任务后、implementation 前。**3 层强制不可跳过。**
 
 > 调用 `/autoresearch:scenario`，沿 12 个维度生成边界案例。
 
@@ -468,7 +484,8 @@ auto-split (PRD→beads):
       state transition
 ```
 
-**跳过方式**：告诉 agent "skip scenario"。
+**跳过方式**：设置 `gate_scenario=skipped` 在 `.devflow/state` 中。
+**拦截机制**：PreToolUse hook 在 step=impl 时检查 gate_scenario != done 会拦截。
 
 ### ③ — Implementation 注入
 
@@ -493,19 +510,22 @@ tdd-deep-docs:
     - refactoring.md      — 一次只做一步重构
     - tests.md            — 测试行为而非实现
 
-autoresearch:fix — 每个任务完成后的零错误门:
+autoresearch:fix — 每个任务完成后的零错误门 ★ HARD GATE:
   - 每个任务完成后，claim 下一个任务前自动运行:
     /autoresearch:fix --target "npm run build && npm test"
   - :fix 会迭代修复直到错误数为零
   - 通过后才允许 claim 下一个任务
-  - 跳过方式: 告诉 agent "skip fix gate"
+  - 跳过方式: 设置 gate_fix=skipped
 ```
 
-### ②¾ — Autoresearch Security 注入 ★ 自动
+### ②¾ — Autoresearch Security 注入 ★ HARD GATE
 
-**时机**：code-review 完成后、finish-branch 前。默认自动执行。
+**时机**：code-review 完成后、finish-branch 前。**3 层强制不可跳过。**
 
 > 调用 `/autoresearch:security --diff`，只审计本次变更的文件。
+
+**跳过方式**：设置 `gate_security=skipped` 在 `.devflow/state` 中。
+**拦截机制**：PreToolUse hook 在 step=finish 时检查 gate_security != done 会拦截。
 
 ```yaml
 触发: 自动（不是 git add/commit/push 前的 hook，而是

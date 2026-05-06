@@ -122,8 +122,8 @@ Phase 1: Ideate (session-level, per-feature)
   then invokes to-prd for formatting. End result is a production-
   ready PRD that feeds into Phase 2 (Design) and Phase 4.
 
-  **HANDOFF: After PRD is done, immediately proceed to ⓪½ — Phase 2
-  UI Design Engine below. Update state: phase=2, step=ui-req.
+  **HANDOFF: After PRD is done, immediately proceed to Phase 2
+  (UI Design Engine below). Update state: phase=2, step=ui-req.
   Do NOT skip to Phase 4.**
 
   **IMPORTANT: After Phase 1 completes — MUST proceed to Phase 2.
@@ -279,6 +279,9 @@ Phase 4: Develop (session-level, each task)
                                  loop if they set a target
   finish-branch         (superpowers native)
 
+  **PHASE 4→5 HANDOFF: After finish-branch, update
+  .devflow/state: phase=5, step=finish. Then proceed to Phase 5 below.**
+
   Background:    Git guardrails block dangerous commands
 
   **gitnexus注:** 所有 gitnexus 命令依赖 Docker Desktop。
@@ -287,15 +290,12 @@ Phase 4: Develop (session-level, each task)
 
 Phase 5: Finish (project-level, per-session)
   ─────────────────────────────────────────
-  ①═ AUTORESEARCH OPTIMIZE ════ Ask user: "是否需要运行
-                                 autoresearch 自动优化？
-                                 可设定目标：提高覆盖率、
-                                 优化性能、减少包体积等"
-                                 用户同意 → 引导设置 Goal/
-                                 Scope/Metric → 跑 $autoresearch
-                                 用户拒绝 → 跳过
+  Phase 4's optimize step already handles autoresearch.
+  Phase 5 is lightweight — close and push only:
+  ① Update .devflow/state: phase=5, step=finish → done
   ② beads close all session issues
-  ③ Report session summary
+  ③ git add + git commit + git push
+  ④ Report session summary
 ```
 
 ## State File — `.devflow/state`
@@ -305,7 +305,7 @@ Phase 5: Finish (project-level, per-session)
 | 字段 | 说明 | 取值示例 |
 |------|------|---------|
 | `phase` | 当前大阶段 | 1, 2, 3, 4, 5 |
-| `step` | 当前精确步骤 | brainstorming, grill, probe, plans, scenario, impl, review, security, optimize, finish |
+| `step` | 当前精确步骤 | 见下方各 Phase 步骤列表 |
 | `feature` | 当前正在开发的功能 | "用户注册" |
 | `prd` | PRD 文件路径 | "docs/prd/user-registration.md" |
 | `blocker` | 阻塞原因（如有） | "等待设计稿" |
@@ -316,7 +316,9 @@ Phase 5: Finish (project-level, per-session)
 | `updatedAt` | 最后更新时间 | "2026-05-05T12:00:00Z" |
 | | **Phase 1 steps:** `problem` → `users` → `features` → `constraints` → `prd` |
 | | **Phase 2 steps:** `ui-req` → `arch-decision` → `scaffold` → `ux-docs` → `design-done` |
+| | **Phase 3 steps:** `setup` (single step — fully automatic) |
 | | **Phase 4 steps:** `brainstorming` → `grill` → `probe` → `plans` → `scenario` → `impl` → `review` → `security` → `optimize` → `finish` |
+| | **Phase 5 steps:** `finish` → `done` (close + push) |
 
 **更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
 
@@ -324,8 +326,8 @@ Phase 5: Finish (project-level, per-session)
 - phase=1（Ideate）：用户提新想法，走 Phase 1 引导流程；已有 PRD 则直接进 Phase 2
 - phase=2（Design）：按 4 阶段引擎执行（ui-req → arch-decision → scaffold → ux-docs → design-done）
 - phase=3（Setup）：检测工具是否齐全，运行安装流程
-- phase=4（Develop）：按 Phase 4 子步骤执行（brainstorming → grill → probe → plans → scenario → impl → review → security → optimize）
-- phase=5（Finish）：关闭 beads 任务，询问是否 autoresearch 优化，提交推送
+- phase=4（Develop）：按 Phase 4 子步骤执行（brainstorming → grill → probe → plans → scenario → impl → review → security → optimize → finish）
+- phase=5（Finish）：更新 state → close beads → git push → 报告摘要
 
 **写入规则：** 每次状态变化后（包括 step 变更、gate 状态变化）立即更新 `.devflow/state`。agent 必须手动编辑该文件更新字段。
 
@@ -496,7 +498,7 @@ Note: This is Claude-guided collaboration — no HITL gate needed.
       End the full discovery with "Ready to turn this into a PRD?"
 ```
 
-### ⓪½ — Phase 2 Design Injection **★ MANDATORY**
+### Phase 2 Design Injection **★ MANDATORY**
 
 **After PRD is ready, MUST execute Phase 2 before proceeding to Phase 4. Do NOT skip.**
 
@@ -592,8 +594,10 @@ Phase 2: UI Design Engine (4-stage executable flow)
          bd create --title="<feature> frontend" --type=epic
          bd create --title="Implement <component>" --parent=<epic> --type=task (per component)
       4. Update .devflow/state:
-         phase=4 (or phase=3 if not yet initialized)
-         step=pipeline-entry
+         Check if tools are installed (bd, gitnexus):
+           - If NOT installed → phase=3, step=setup
+           - If installed → phase=4, step=brainstorming
+         This ensures Phase 3 setup is never accidentally skipped.
       5. Confirm with user: "Frontend design complete. Ready to enter the
          development pipeline."
 ```
@@ -815,6 +819,7 @@ If user declines → proceed to close and push.
 
 After completion:
   Keep or revert based on $autoresearch results
+  Update .devflow/state: phase=5, step=finish
   Proceed to Phase 5 close + push
 
 Opt-out: User says "no" or "skip optimize"

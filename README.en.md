@@ -83,12 +83,12 @@ Each project follows this lifecycle in Claude Code, from idea to shipped product
 User shares an idea
     │
     ▼
-⓪ PHASE 1 — IDEATE (Claude-guided)
+PHASE 1 — IDEATE (Claude-guided)
    Structured questioning → personas → problem analysis
    Output: PRD saved to docs/prd/
     │
     ▼
-⓪½ PHASE 2 — DESIGN (Claude-guided)
+PHASE 2 — DESIGN (Claude-guided)
    UI architecture → tech stack → component tree
    Option: screenshot-to-code for design→code conversion
    Output: Frontend scaffold + docs/ux/ design decisions
@@ -272,16 +272,18 @@ bash scripts/prd-to-beads.sh -d docs/design.md -e "Feature Title"
 
 ### 5. Auto-Research Gates (autoresearch)
 
-4 automatic gates along the pipeline, ON by default:
+4 automatic gates along the pipeline, **HARD ENFORCED** with 3-layer mechanism (state tracking + hook interception + SKILL.md instructions):
 
-| Gate | Trigger | Purpose |
-|------|---------|---------|
-| **Probe** (①¾) | After grill | 8 adversarial personas find hidden constraints |
-| **Scenario** (②½) | After plans | 12-dimension edge case generation |
-| **Fix** (③) | Per-task | Iterative zero-error gate before next task |
-| **Security** (②¾) | Before finish | STRIDE + OWASP + red team audit |
+| Gate | Trigger | Purpose | Enforcement |
+|------|---------|---------|-------------|
+| **Probe** (①¾) | After grill | 8 adversarial personas find hidden constraints | PreToolUse blocks `plans` step if gate_probe != done |
+| **Scenario** (②½) | After plans | 12-dimension edge case generation | PreToolUse blocks `impl` step if gate_scenario != done |
+| **Fix** (③) | Per-task | Iterative zero-error gate before next task | SKILL.md per-task lock (mark gate_fix=done to proceed) |
+| **Security** (②¾) | Before finish | STRIDE + OWASP + red team audit | PreToolUse blocks `finish` step if gate_security != done |
 
-Opt-out: `DEVFLOW_NO_AUTORESEARCH=1` or tell the agent "skip probe/scenario/fix gate/security audit".
+Tracked in `.devflow/state` as `gate_probe`, `gate_scenario`, `gate_fix`, `gate_security` (values: pending, done, skipped).
+
+Opt-out per gate: set field to `skipped` in `.devflow/state`. Global opt-out: `DEVFLOW_NO_AUTORESEARCH=1`.
 
 ### 6. Git Guardrails
 

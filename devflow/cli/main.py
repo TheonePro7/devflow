@@ -16,6 +16,7 @@ from devflow.cli.ideate_cmd import run_ideate
 from devflow.cli.log_cmd import run_log
 from devflow.cli.dev_cmd import run_dev
 from devflow.cli.doctor_cmd import run_doctor
+from devflow.cli.help_cmd import run_help
 
 
 def _setup_encoding():
@@ -82,6 +83,10 @@ def main(argv: list[str] | None = None):
     p_log.add_argument("--tail", type=int, default=0, help="只看最近 N 条")
     p_log.add_argument("--json", action="store_true", help="JSON 格式输出")
     p_log.set_defaults(func=run_log)
+
+    # guide
+    p_guide = subparsers.add_parser("guide", help="工作流地图引导")
+    p_guide.set_defaults(func=run_help)
 
     # doctor
     p_doctor = subparsers.add_parser("doctor", help="一键环境诊断")

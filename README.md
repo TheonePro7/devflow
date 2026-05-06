@@ -262,62 +262,42 @@ docs/tdd/             # TDD 深度参考文档目录
     ▼
 ┌─────────────────────────────────────────────────┐
 │ ① superpowers-brainstorming                     │
+│   设计探索 → 2-3 方案 → user 审批                │
+│   ★ HARD GATE: user 批准前不得写代码             │
 │   devflow 注入: beads epic + gitnexus context   │
-│   + CONTEXT.md                                  │
+├─────────────────────────────────────────────────┤
+    │ 用户批准设计
+    ▼
+┌─────────────────────────────────────────────────┐
+│ using-git-worktrees                             │
+│   创建隔离工作区，不污染主项目                   │
 ├─────────────────────────────────────────────────┤
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ ①½ PLAN-GRILL (HITL 关卡)                       │
-│   用 CONTEXT.md + ADR + gitnexus 拷问计划       │
-│   发现盲点 → 更新 CONTEXT.md → 确认通过        │
-│   不通过则返回 brainstorming                    │
-├─────────────────────────────────────────────────┤
-    │
-    ▼
-┌─────────────────────────────────────────────────┐
-│ ①¾ AUTORESEARCH PROBE ★ HARD GATE               │
+│ ①½ AUTORESEARCH PROBE ★ HARD GATE               │
 │   /autoresearch:probe                           │
 │   8 个对抗人格发现隐藏约束和矛盾                │
-│   输出约束报告 → 补充到 plans                   │
-│   3 层强制: state + hook + SKILL.md            │
 │   跳过: 设置 gate_probe=skipped                │
 ├─────────────────────────────────────────────────┤
     │
     ▼
 ┌─────────────────────────────────────────────────┐
 │ ② superpowers-writing-plans                     │
+│   按 superpowers 格式: header + 无占位符规则     │
 │   devflow 注入: beads sub-issues + gitnexus     │
 │   impact + PRD→beads 自动拆分                   │
 ├─────────────────────────────────────────────────┤
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ ②½ AUTORESEARCH SCENARIO ★ HARD GATE            │
-│   /autoresearch:scenario                        │
-│   为每个任务生成边界案例和错误状态              │
-│   输出测试场景 → 补充 task 描述                 │
-│   3 层强制: state + hook + SKILL.md            │
-│   跳过: 设置 gate_scenario=skipped             │
-├─────────────────────────────────────────────────┤
-    │
-    ▼
-┌─────────────────────────────────────────────────┐
 │ ③ superpowers-subagent-driven-development       │
-│   devflow 注入: gitnexus context + beads ready  │
-│   + TDD deep docs                               │
-│   ┌─ 每个任务完成后 ──────────────────────┐     │
-│   │ ★ AUTORESEARCH:FIX 零错误门 ★ HARD    │     │
-│   │ /autoresearch:fix --target "npm test" │     │
-│   │ 通过后才 claim 下一个任务              │     │
-│   │ 跳过: 设置 gate_fix=skipped           │     │
-│   └────────────────────────────────────────┘     │
-├─────────────────────────────────────────────────┤
-    │
-    ▼
-┌─────────────────────────────────────────────────┐
-│ superpowers-requesting-code-review              │
-│ (devflow 不参与)                                │
+│   完整 per-task 循环:                            │
+│   ├─ implementer 子 agent                       │
+│   ├─ spec-reviewer 子 agent                     │
+│   ├─ quality-reviewer 子 agent                  │
+│   └─ requesting-code-review (devflow 参与!)     │
+│   devflow 注入: gitnexus context + beads depth  │
 ├─────────────────────────────────────────────────┤
     │
     ▼
@@ -326,38 +306,49 @@ docs/tdd/             # TDD 深度参考文档目录
 │   /autoresearch:security --diff                 │
 │   STRIDE + OWASP Top10 + 红队审计              │
 │   Critical/High 必须修复才能 finish             │
-│   3 层强制: state + hook + SKILL.md            │
 │   跳过: 设置 gate_security=skipped             │
 ├─────────────────────────────────────────────────┤
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ superpowers-finishing-a-development-branch      │
-│ (devflow 不参与)                                │
+│ ③¼ AUTORESEARCH OPTIMIZE (交互式)               │
+│   完整 loop: plan→modify→verify→keep/discard→log │
+│   /autoresearch:plan 设置 Goal+Scope+Metric     │
+│   /autoresearch 运行 N 轮                       │
+│   TSV 日志 → 自动 git rollback → keep/discard   │
 ├─────────────────────────────────────────────────┤
     │
     ▼
 ┌─────────────────────────────────────────────────┐
-│ PHASE 4→5 HANDOFF                               │
-│ 更新 .devflow/state: phase=5, step=finish       │
-│ 然后进入 Phase 5 close + push                   │
+│ ⑤ superpowers-finishing-a-development-branch    │
+│   4 选项: merge / PR / keep / discard           │
+│   cleanup: using-git-worktrees 清理             │
+├─────────────────────────────────────────────────┤
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ PHASE 4→5 HANDOFF → Phase 5 close + push       │
 └─────────────────────────────────────────────────┘
 
-后台运行: Git guardrails PreToolUse hook + 门禁状态检查
+后台运行:
+  - Git guardrails PreToolUse hook
+  - verification-before-completion 通用门禁
+  - beads 质量检查 (lint/stale/orphans)
 ```
 
-### Grill 关卡详解
+### Phase 4 设计理念
 
-Plan-grill 是 devflow 从 mattpocock/skills 的 `grill-with-docs` 借鉴的核心模式。它位于 brainstorming 之后、writing-plans 之前，是一个**必须的人工确认关卡**。
+devflow Phase 4 不再自创 10 步流程，而是**完全对齐 superpowers 的原始技能链**，只在定义点注入 devflow 的工具（beads + gitnexus + autoresearch）。
 
-**执行步骤**：
+**关键变更（与旧版对比）**:
 
-1. **词汇验证** — 读取 `docs/CONTEXT.md`，检查设计文档中的所有术语是否已定义。缺失的术语补充到 CONTEXT.md。
-2. **ADR 一致性检查** — 读取 `docs/adr/`，检查设计是否与已有架构决策冲突。冲突时标记并建议方案。
-3. **代码事实验证** — 使用 `gitnexus context <symbol>` 验证设计中引用的代码符号是否存在、接口是否匹配。
-4. **依赖阻塞检查** — 使用 `bd dep check` 或 `bd ready` 检查是否有阻塞依赖未解决。
-5. **边界案例发明** — 主动找出设计中未覆盖的边界输入、错误状态、并发访问场景等。
-6. **输出拷问报告** — 写入 `docs/superpowers/specs/<design>-grill-report.md`，包含：术语修改记录、发现的盲点及解决方案、与 ADR 的一致性确认。
+| 旧版 devflow 步骤 | 新版 | 理由 |
+|------|------|------|
+| brainstorming → grill → probe → plans → scenario → impl → review → security → optimize → finish | brainstorming(HARD GATE) → probe → plans → impl (含 spec-review + quality-review + code-review) → security → optimize | 消除重复：grill 被 brainstorming 的设计审批替代；scenario 被 spec-reviewer 子 agent 覆盖；fix 被 quality-reviewer 覆盖 |
+| `devflow 不参与` code review | ✅ 现在参与 | superpowers 的 requesting-code-review 是 per-task 的 |
+| 不创建隔离工作区 | ✅ adding using-git-worktrees | 防止污染主工作区 |
+| autoresearch 4 门（probe/scenario/fix/security） | autoresearch 3 重（probe/security/optimize） | scenario 和 fix 由 superpowers 的子 agent 覆盖 |
+| optimize 只是提示 | ✅ 完整 autoresearch loop | plan→modify→verify→keep/discard→log→repeat |
 
 **产出物**：
 - 更新后的 `docs/CONTEXT.md`
@@ -408,124 +399,94 @@ context:
   - 加载 docs/adr/，让子 agent 了解过去的架构决策
 ```
 
-### ①½ — Grill 注入
+### ① — Brainstorming + HARD GATE
 
-**时机**：brainstorming 产出设计文档后，writing-plans 分解任务前。
+**时机**：理解用户需求后。**这是 devflow Phase 4 的入口。**
 
-参见[第三节 Grill 关卡详解](#grill-关卡详解)。
+> 调用 `superpowers-brainstorming` Skill。这是 superpowers 原生的设计探索技能。
 
-### ①¾ — Autoresearch Probe 注入 ★ HARD GATE
-
-**时机**：grill 通过后、writing-plans 前。**3 层强制不可跳过。**
-
-> 调用 `/autoresearch:probe`，8 个对抗人格（架构师、安全分析师、
-> 性能工程师、可靠性工程师、魔鬼代言人等）独立分析设计后辩论达成共识。
+**HARD GATE: 必须先呈现设计给用户批准，才能写代码。**
 
 ```yaml
-触发: 自动（DEVFLOW_NO_AUTORESEARCH 未设置时）
+流程:
+  1. beads: bd create --title="<feature>" --type=epic
+  2. gitnexus context + CONTEXT.md + ADR 加载
+  3. 一步步提出方案（2-3 种），推荐最优
+  4. 呈现设计 → 用户审批（HARD GATE）
+  5. 写设计文档 → docs/superpowers/specs/
+  6. 创建隔离工作区: using-git-worktrees
+```
+
+**拦截机制**: brainstorming 步骤中如果 agent 直接写代码 → PreToolUse hook 告警。
+
+### ①½ — Autoresearch Probe 注入 ★ HARD GATE
+
+**时机**：设计批准后、writing-plans 前。**3 层强制不可跳过。**
+
+> 调用 `/autoresearch:probe`，8 个对抗人格发现隐藏约束。
+
+```yaml
+触发: 自动
 命令: /autoresearch:probe --chain plan,autoresearch
       Topic: "<feature-title>"
 
 输出: probe/{date}-{slug}/
-  - spec.md              — 细化后的需求规约
-  - constraints.tsv      — 发现的约束条件
-  - contradictions.md    — 需求中的矛盾点
-  - assumptions.md       — 被挑战的假设
-  - handoff.json         — 传给 writing-plans 的结构化数据
+  - 约束条件、矛盾点、假设、handoff.json
 
-目的: 人工 grill 找明显盲点，autoresearch:probe 找深层隐藏约束。
-      两者互补，确保 plans 基于完整的需求理解。
+跳过: 设置 gate_probe=skipped
+拦截: PreToolUse hook 在 step=probe 时检查
 ```
 
-**跳过方式**：设置 `gate_probe=skipped` 在 `.devflow/state` 中，或告诉 agent "skip probe"。
-**拦截机制**：PreToolUse hook 在 step=plans 时检查 gate_probe != done 会拦截。
+### ② — Writing Plans + beads 深度注入
 
-### ② — Writing Plans 注入
+**时机**：probe 完成后。
 
-**时机**：计划分解为任务后，每个任务开始前。
+> 调用 `superpowers-writing-plans` Skill。按 superpowers 格式写计划。
 
 ```yaml
 beads:
   - bd create --title="<task>" --parent=<epic_id> --type=task
-  - bd dep add <task_id> <dependency_id>
-  - 任务 ID 层级化: bd-xxx.1, bd-xxx.1.1, ...
+  - bd link <task> <dependency>    # 设置依赖图
+  - bd label add <id> <type>       # 标签
 
 gitnexus:
-  - bash scripts/gitnexus-docker.sh impact <symbol> --depth 2
-  - 分析变更的"爆炸半径"（影响范围），注入计划上下文
-  - 注意: 需要 Docker Desktop 运行；docker 不可用时跳过（非致命）
+  - scripts/gitnexus-docker.sh impact <symbol> --depth 2
 
-auto-split (PRD→beads):
-  - 如果设计文档包含 "## Task:" 标题，自动运行:
-    scripts/prd-to-beads.ps1 -d ./docs/superpowers/specs/<design>.md -e "<title>" -i <epic_id>
-  - 或 bash: bash scripts/prd-to-beads.sh -d ... -e ... -i ...
-  - 每个 task 创建为一个 beads issue，自动设置 Depends on 关系
+auto-split:
+  - scripts/prd-to-beads.sh -d <design.md>
+
+执行选择:
+  提供两种选项: subagent-driven-development (推荐) 或 executing-plans
 ```
 
-### ②½ — Autoresearch Scenario 注入 ★ HARD GATE
+### ③ — Subagent-Driven Development + 全注入
 
-**时机**：writing-plans 分解任务后、implementation 前。**3 层强制不可跳过。**
+**时机**：计划分解后。
 
-> 调用 `/autoresearch:scenario`，沿 12 个维度生成边界案例。
+> 调用 `superpowers-subagent-driven-development` Skill。
 
-```yaml
-触发: 自动
-命令: /autoresearch:scenario
-      Scenario: "<task-title>"
-      Iterations: 15
-      Focus: edge-cases
-
-输出: scenario/{date}-{slug}/
-  - 每个任务的边界条件、错误状态、异常流
-  - 附加到 beads task 描述中，子 agent 实现时直接使用
-
-维度: happy path, error, edge case, abuse, scale, concurrency,
-      temporal, data variation, permissions, integration, recovery,
-      state transition
-```
-
-**跳过方式**：设置 `gate_scenario=skipped` 在 `.devflow/state` 中。
-**拦截机制**：PreToolUse hook 在 step=impl 时检查 gate_scenario != done 会拦截。
-
-### ③ — Implementation 注入
-
-**时机**：`superpowers-subagent-driven-development` 执行期间。
+完整的 per-task 循环：implementer → spec-reviewer → quality-reviewer → **requesting-code-review**
 
 ```yaml
 gitnexus:
-  - 主 agent 预取 gitnexus context（通过 scripts/gitnexus-docker.sh）
-    传给 implementer/spec-reviewer/quality-reviewer
-  - 子 agent 不直接运行 gitnexus（避免重复调用和权限问题）
-  - 需要 Docker Desktop 运行；docker 不可用时跳过（非致命）
+  - 主 agent 预取 context 传给每个子 agent
 
-beads:
-  - bd ready: 检查阻塞任务是否完成，防止在依赖未就绪时开始工作
-  - bd update <id> --claim: 原子地分配任务，避免多人冲突
+beads (深度):
+  - bd ready → bd update --claim → bd note 记录进度
 
-tdd-deep-docs:
-  - TDD 模式下引用 docs/tdd/*.md:
-    - deep-modules.md     — 用简单接口隐藏复杂实现
-    - interface-design.md — 为调用者设计契约优先
-    - mocking.md          — 仅在系统边界使用 mock
-    - refactoring.md      — 一次只做一步重构
-    - tests.md            — 测试行为而非实现
+requesting-code-review:
+  - 每个 task 完成后调用，不再标注"devflow 不参与"
+  - 使用 superpowers 原生模板
 
-autoresearch:fix — 每个任务完成后的零错误门 ★ HARD GATE:
-  - 每个任务完成后，claim 下一个任务前自动运行:
-    /autoresearch:fix --target "npm run build && npm test"
-  - :fix 会迭代修复直到错误数为零
-  - 通过后才允许 claim 下一个任务
-  - 跳过方式: 设置 gate_fix=skipped
+verification-before-completion:
+  - 通用门禁: 无验证证据不得声称完成
 ```
 
-### ②¾ — Autoresearch Security 注入 ★ HARD GATE
+### ②¾ — Autoresearch Security ★ HARD GATE
 
-**时机**：code-review 完成后、finish-branch 前。**3 层强制不可跳过。**
+**时机**：所有 code-review 完成后、finish-branch 前。**3 层强制不可跳过。**
 
-> 调用 `/autoresearch:security --diff`，只审计本次变更的文件。
-
-**跳过方式**：设置 `gate_security=skipped` 在 `.devflow/state` 中。
-**拦截机制**：PreToolUse hook 在 step=finish 时检查 gate_security != done 会拦截。
+> 调用 `/autoresearch:security --diff`，只审计本次变更。
 
 ```yaml
 触发: 自动（不是 git add/commit/push 前的 hook，而是

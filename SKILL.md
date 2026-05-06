@@ -53,10 +53,9 @@ Agent 没有自觉意识，但有记忆——这套机制确保 agent 永远不�
 2. **devflow's value is tool injection** — beads task tracking, gitnexus code graph context, grill session, PRD→beads auto-split, TDD deep docs, autoresearch auto-optimization, and **screenshot-to-code frontend generation** are injected at defined points.
 3. **Phase 1 (Ideate) comes first.** No design or coding before the idea is clarified. Phase 1 runs a 4-stage adaptive discovery, then invokes to-prd to produce the final PRD. Phase 2 (Design) follows — frontend architecture + UI generation before any backend code.
 4. **Phase 1/2 are Claude-guided, not HITL gates.** The user provides vision and feedback; Claude drives the 4-stage discovery and invokes to-prd for formatting. Hard gates (grill, autoresearch) apply from Phase 4 onward.
-5. **Autoresearch runs automatically at 3 pipeline gates (probe → scenario → fix+security).** It is ON by default. To disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix) before session start.
-6. **No code without spec sign-off.** Phase 4 respects superpowers' hard gate: brainstorming → grill → probe → plans → scenario → implementation+TDD → fix → review → security.
-7. **Git guardrails are always active.** Dangerous git commands are blocked by PreToolUse hook.
-8. **ALL tools are auto-installed.** Never ask the user to install anything. If a tool is missing, install it. See [Auto-Install Rules](#auto-install-rules) below.
+5. **Autoresearch runs at 2 pipeline points (probe → security).** ON by default. Optimize loop is interactive (user decides). Disable: `$env:DEVFLOW_NO_AUTORESEARCH=1` (Windows) or `export DEVFLOW_NO_AUTORESEARCH=1` (Unix).
+6. **Phase 4 follows superpowers skill chain exactly.** brainstorming (HARD GATE: design approval required) → using-git-worktrees → writing-plans → subagent-driven-development (with per-task spec-review + quality-review + code-review) → finishing-a-development-branch. devflow does NOT reimplement or restructure this chain.
+7. **verification-before-completion universal gate.** No claim of completion without fresh verification evidence. Applies to every step.
 
 ## Architecture
 
@@ -246,47 +245,51 @@ Phase 3: Setup (project-level, one-time, FULLY AUTOMATIC)
 
 Phase 4: Develop (session-level, each task)
   ─────────────────────────────────────────
-  Delegates to superpowers pipeline, injects tools AND autoresearch:
+  完全对齐 superpowers 原始技能链，devflow 只在定义点注入工具。
 
-  superpowers pipe         devflow injects
-  ────────────────         ──────────────
-  brainstorming  ──────①── beads: create epic issue
-                                 gitnexus-docker: context <核心符号>
-                                 CONTEXT.md: domain vocab
-  ══ GRILL ══════════════①½── challenge plan with CONTEXT.md
-                                 + ADR + gitnexus-docker impact (HITL gate)
-  ══ AUTORESEARCH ═══════①¾── probe: adversarial constraint
-                                 discovery after manual grill
-                                 (HARD GATE — hook blocks next step)
-  writing-plans  ──────②── beads: create sub-issues per task
-                                 gitnexus-docker: impact <接口> --depth 2
-                                 PRD→beads: auto-split tasks
-  ══ AUTORESEARCH ═══════②½── scenario: edge case discovery
-                                 per task before coding
-                                 (HARD GATE — hook blocks next step)
-  subagent-dev   ──────③── gitnexus-docker: context <目标函数>
-                                 (fed to subagents)
-                                 beads: bd ready check
-                                 TDD deep docs
-                                 ══ per-task quality gate ══
-                                 each task done → $autoresearch fix
-                                 (HARD GATE — cannot skip)
-  code-review           (superpowers native)
-  ══ AUTORESEARCH ═══════②¾── security: audit changes before
-                                 finish (HARD GATE — hook blocks finish)
-  ══ AUTORESEARCH ═══════③¼── optimize: prompt user for auto-
-                                 optimization goal, run $autoresearch
-                                 loop if they set a target
-  finish-branch         (superpowers native)
+  superpowers 原始链               devflow 注入
+  ────────────────────────         ──────────────
+  ① brainstorming HARD GATE        beads: create epic issue
+    设计→用户审批→设计文档            gitnexus-docker: context <核心符号>
+    └─ 用户批准前不得写代码            CONTEXT.md: domain vocab
+    ② using-git-worktrees          自动创建隔离工作区
+    └─ 确保不污染主工作区
+  ══ AUTORESEARCH ═══════①½── probe: 对抗人格约束发现
+                                  (HARD GATE — hook拦截)
+  ③ writing-plans                  beads: create sub-issues + dep link
+    └─ 模板header + 无占位符规则      gitnexus-docker: impact --depth 2
+    └─ 输出: 可执行计划               PRD→beads: auto-split
+  ④ subagent-driven-development    gitnexus: context fed to subagents
+    ├─ implementer 子 agent         beads: bd ready + bd update --claim
+    ├─ spec-reviewer 子 agent       TDD deep docs (docs/tdd/)
+    ├─ code-quality-reviewer        (取代 devflow 旧的 fix 门禁)
+    └─ requesting-code-review       (devflow 之前标注"不参与" — 现在参与)
+  ══ AUTORESEARCH ═══════②¾── security: --diff 安全审计
+                                  (HARD GATE — hook拦截)
+  ══ AUTORESEARCH ═══════③¼── optimize: 完整优化循环
+                                  (交互式 — 用户决定)
+  ⑤ finishing-a-development-branch (superpowers原生)
+    └─ 4选项: merge/PR/keep/discard
+    └─ cleanup: using-git-worktrees 清理
 
   **PHASE 4→5 HANDOFF: After finish-branch, update
   .devflow/state: phase=5, step=finish. Then proceed to Phase 5 below.**
 
   Background:    Git guardrails block dangerous commands
 
+  **verification-before-completion 通用门禁:**
+  任何时候声称"完成""通过""修复了"之前，必须先跑验证命令看输出。
+  "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE"
+
   **gitnexus注:** 所有 gitnexus 命令依赖 Docker Desktop。
   每个注入点先检查 `docker ps`，不可用时推荐安装；
   用户拒绝 → 跳过 gitnexus（非致命，agent 照常工作）。
+
+  **beads 深度使用:**
+  - 依赖图: bd link <task> <dependency>
+  - 标签: bd label add <id> <type>
+  - 质量: bd lint + bd stale + bd orphans (Phase 5)
+  - Dolt 版本: bd dolt log 追溯 issue 变更历史
 
 Phase 5: Finish (project-level, per-session)
   ─────────────────────────────────────────
@@ -310,14 +313,12 @@ Phase 5: Finish (project-level, per-session)
 | `prd` | PRD 文件路径 | "docs/prd/user-registration.md" |
 | `blocker` | 阻塞原因（如有） | "等待设计稿" |
 | `gate_probe` | probe 门禁状态 | pending, done, skipped |
-| `gate_scenario` | scenario 门禁状态 | pending, done, skipped |
-| `gate_fix` | fix 门禁状态 | pending, done, skipped |
 | `gate_security` | security 门禁状态 | pending, done, skipped |
 | `updatedAt` | 最后更新时间 | "2026-05-05T12:00:00Z" |
 | | **Phase 1 steps:** `problem` → `users` → `features` → `constraints` → `prd` |
 | | **Phase 2 steps:** `ui-req` → `arch-decision` → `scaffold` → `ux-docs` → `design-done` |
 | | **Phase 3 steps:** `setup` (single step — fully automatic) |
-| | **Phase 4 steps:** `brainstorming` → `grill` → `probe` → `plans` → `scenario` → `impl` → `review` → `security` → `optimize` → `finish` |
+| | **Phase 4 steps:** `brainstorming` (HARD GATE) → `probe` → `plans` → `impl` → `security` → `optimize` |
 | | **Phase 5 steps:** `finish` → `done` (close + push) |
 
 **更新规则：** 完成后一步立即更新，使用 `bd update` 写入或直接编辑文件。
@@ -326,7 +327,7 @@ Phase 5: Finish (project-level, per-session)
 - phase=1（Ideate）：用户提新想法，走 Phase 1 引导流程；已有 PRD 则直接进 Phase 2
 - phase=2（Design）：按 4 阶段引擎执行（ui-req → arch-decision → scaffold → ux-docs → design-done）
 - phase=3（Setup）：检测工具是否齐全，运行安装流程
-- phase=4（Develop）：按 Phase 4 子步骤执行（brainstorming → grill → probe → plans → scenario → impl → review → security → optimize → finish）
+- phase=4（Develop）：按 superpowers 原始链执行（brainstorming → probe → plans → impl → security → optimize）
 - phase=5（Finish）：更新 state → close beads → git push → 报告摘要
 
 **写入规则：** 每次状态变化后（包括 step 变更、gate 状态变化）立即更新 `.devflow/state`。agent 必须手动编辑该文件更新字段。
@@ -552,13 +553,20 @@ Phase 2: UI Design Engine (4-stage executable flow)
 
   Stage 3: Frontend Scaffold Generation (step=scaffold)
     Goal: Generate frontend code from the blueprint.
+    
+    **HARD GATE: 必须先呈现设计给用户批准才能生成代码。**
+    这是 superpowers brainstorming 的延伸 — 前端设计输出后用户必须确认。
+    "太简单不需要"不是跳过理由。
+    
     Process:
-      1. Count pages from Stage 1 → determine complexity:
+      1. 呈现出架构概览: "这是设计蓝图, 共 X 页/组件, 使用 <框架> + <设计系统>"
+      2. **等待用户确认设计** → 获得批准后才能写代码
+      3. Count pages from Stage 1 → determine complexity:
          - 1-5 pages  → Claude Direct (DEFAULT, zero install)
          - 6-15 pages → Ask user: "This has X pages, want to use OpenUI?"
          - 16+ pages  → Ask user: "Large project, want to use bolt.diy?"
          - Has screenshots → Ask: "Want to use screenshot-to-code?"
-      2. Claude Direct (80% of projects):
+      4. Claude Direct (80% of projects):
          a. Create project directory (if not existing):
             - For new: scaffold with chosen framework
             - For existing: add to appropriate directory
@@ -570,12 +578,12 @@ Phase 2: UI Design Engine (4-stage executable flow)
             - Match to backend spec from PRD
             - Use fetch/axios with typed interfaces
          d. Generate routes/navigation structure
-      3. Apply design tokens:
+      5. Apply design tokens:
          - Color palette from brand color (#1677ff default)
          - Spacing scale (Tailwind-compatible)
          - Typography (Inter / Plus Jakarta Sans)
-      4. Show user the generated frontend
-      5. Wait for feedback, iterate if needed
+      6. Show user the generated frontend
+      7. Wait for feedback, iterate if needed
     Edge case: User wants a specific framework not in the table:
       → Use whatever the user specifies. Framework matching is a default, not a constraint.
     Output: Frontend scaffold code + API stubs
@@ -605,193 +613,173 @@ Phase 2: UI Design Engine (4-stage executable flow)
 Note: This is Claude-guided — no HITL gates. The user confirms each stage.
 If the project is CLI-only / API-only / library (no UI), skip Phase 2 entirely.
 
-### ① — Brainstorming Injection
+### ① — Brainstorming + HARD GATE (superpowers 原生)
 
-Before `superpowers-brainstorming` runs:
+**调用: superpowers-brainstorming Skill**
 
+这是 superpowers 原生的设计探索技能。强制执行 HARD GATE：无设计审批不得写代码。
+
+**按 brainstorming 的 9 步清单执行:**
+1. 探索项目上下文 — 文件、文档、最近提交
+2. 如有需要提供视觉伴侣
+3. 逐一提问澄清需求
+4. 提出 2-3 种方案 + 权衡利弊 + 推荐
+5. 呈现设计 — 分节展示，每节用户确认
+6. 写设计文档 → `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+7. 自审查 — 无占位符、无矛盾、范围聚焦
+8. 用户审查文档
+9. 输出设计文档 + git commit
+
+**devflow 注入:**
 ```yaml
 beads:
   - bd create --title="<feature>" --type=epic
 
 gitnexus (via Docker):
-  - First check: docker ps (if fails → recommend Docker Desktop install)
-  - If user declines Docker → skip gitnexus (non-fatal)
-  - If Docker available:
-    1. Determine the core symbols/files this feature relates to
-    2. Run: .\scripts\gitnexus-docker.ps1 context <核心符号>  (Windows)
-       or:  bash scripts/gitnexus-docker.sh context <core-symbol>  (Unix)
-    3. If no obvious symbol, use: gitnexus-docker query "<domain-term>"
+  - 先检查 docker ps（不可用→推荐安装 Docker Desktop）
+  - 用户拒绝→跳过 gitnexus（非致命）
+  - 可用时: .\scripts\gitnexus-docker.ps1 context <核心符号>
+   或: bash scripts/gitnexus-docker.sh context <core-symbol>
 
 context:
-  - Load docs/CONTEXT.md for domain vocabulary
-  - Load docs/adr/ for past architectural decisions
+  - 加载 docs/CONTEXT.md
+  - 加载 docs/adr/ 相关 ADR
+
+设计审批:
+  - 用户必须批准设计才能继续
+  - 这是 HARD GATE — agent 不得跳过
+
+Transition: 设计批准后 → 进入 using-git-worktrees 创建隔离工作区
 ```
 
-### ①½ — Plan-Grill Injection (HITL Gate)
+### ①½ — Autoresearch Probe Injection ★ HARD GATE
 
-After brainstorming, before writing plans:
+设计批准后、writing-plans 前。**PreToolUse hook 在 step=probe 时检查 gate_probe != done 会拦截。**
 
-> Inspired by mattpocock/skills — grill-with-docs
-
-```yaml
-Process:
-  1. Load CONTEXT.md — verify all terms are defined
-  2. Load relevant ADRs — check for conflicts
-  3. gitnexus impact (if Docker available):
-     - Check docker ps first; if not available, recommend install
-     - If user declines, skip (non-fatal)
-     - If available: .\scripts\gitnexus-docker.ps1 impact <design-interface> --depth 2
-  4. beads dep check — ensure no blocked dependency
-  5. Invent boundary cases the design doesn't address
-  6. Output grill report to docs/superpowers/specs/
-
-Note: This is a HUMAN-IN-THE-LOOP step. Must get confirmation.
-```
-
-### ①¾ — Autoresearch Probe Injection ★ HARD GATE
-
-After grill passes, before writing plans. **PreToolUse hook blocks `plans` step if gate_probe != done.**
-
-> Invokes: `$autoresearch probe`
-> Duration: ~2 minutes, 8 adversarial personas interrogate the design
+> 调用: `$autoresearch probe`
+> 8 个对抗人格（架构师、安全分析师、性能工程师等）独立分析设计后辩论达成共识
 
 ```yaml
-Enforcement: HARD — hook blocks Edit|Write when step=plans and gate_probe=pending
+Enforcement: HARD — hook blocks Edit|Write when step=probe and gate_probe=pending
 What: $autoresearch probe
-  Topic: <feature title from brainstorming>
+  Topic: <feature title>
   Depth: standard
 
-Why: The manual grill finds obvious blind spots.
-     autoresearch:probe goes deeper — 8 adversarial personas
-     surface hidden constraints, contradictions, and assumptions
-     the human missed.
+Why: Brainstorming 找到的明显盲点由用户评审捕获。
+     autoresearch:probe 深入更底层 — 发现隐藏约束、矛盾、
+     和用户设计团队成员都没意识到的假设。
 
-Output:
-  - probe/{date}-{slug}/ with spec, constraints TSV,
-    contradictions, assumptions, handoff.json
-  - These feed directly into writing-plans task decomposition
+Output: probe/{date}-{slug}/ with spec, constraints TSV,
+        contradictions, assumptions, handoff.json
+        这些结果结构化输入到 writing-plans
 
 After completion:
   Update .devflow/state → set gate_probe=done, step=plans
 
-Opt-out: Set gate_probe=skipped in .devflow/state (user must explicitly request skip)
+Opt-out: Set gate_probe=skipped in .devflow/state
 ```
 
-### ② — Writing Plans Injection
+### ② — Writing Plans (superpowers 原生) + beads 深度注入
 
-After plan is decomposed into tasks:
+**调用: superpowers-writing-plans Skill**
 
+按 superpowers 格式写计划：
+- 必须含有 header（标题 + Goal + Architecture + Tech Stack）
+- 无占位符规则 — 每个 task 必须有实际代码、实际命令
+- 自审查：spec 覆盖率、占位符扫描、类型一致性
+
+**devflow 注入:**
 ```yaml
 beads:
   - bd create --title="<task>" --parent=<epic_id> --type=task
-  - bd dep add <task> <dependency>
+  - bd link <task> <dependency>    # 设置依赖图
+  - bd label add <id> <type>       # 添加类型标签
 
-gitnexus (if Docker available — else skip with recommendation):
-  - Check docker ps; if not available → "Install Docker Desktop for impact analysis"
-  - If user declines → skip (non-fatal)
-  - If available: .\scripts\gitnexus-docker.ps1 impact <symbol> --depth 2
-  - Include affected areas in task descriptions
+gitnexus (if Docker available):
+  - .\scripts\gitnexus-docker.ps1 impact <symbol> --depth 2
+  - 将影响范围注入 task 描述
 
 auto-split (PRD→beads):
   - scripts/prd-to-beads.ps1/.sh -d <design.md> -e "<title>" -i <epic_id>
+
+Execution handoff:
+  提供两种选项给用户:
+  1. subagent-driven-development (推荐 — 同一会话)
+  2. executing-plans (隔离会话)
 ```
 
-### ②½ — Autoresearch Scenario Injection ★ HARD GATE
+### ③ — Subagent-Driven Development (superpowers 原生) + 全注入
 
-After tasks are decomposed, before implementation starts. **PreToolUse hook blocks `impl` step if gate_scenario != done.**
+**调用: superpowers-subagent-driven-development Skill**
 
-> Invokes: `$autoresearch scenario`
-> Focus: generate edge cases for each identified task
+完整的 per-task 循环:
+1. 派发 implementer 子 agent（含 gitnexus context + TDD docs）
+2. 派发 spec-reviewer 子 agent（审查代码是否符合设计）
+3. 派发 code-quality-reviewer 子 agent（审查代码质量）
+4. 派发 requesting-code-review（审查功能完整性）
+5. 完成后 → finishing-a-development-branch
 
+**devflow 注入:**
 ```yaml
-Enforcement: HARD — hook blocks Edit|Write when step=impl and gate_scenario=pending
-What: $autoresearch scenario
-  Scenario: <task title>
-  Iterations: 15
-  Focus: edge-cases
+gitnexus (if Docker available):
+  - 主 agent 预取 context 传给每个子 agent
+  - 子 agent 不直接运行 gitnexus
 
-Why: Tasks from writing-plans describe WHAT to build.
-     autoresearch:scenario generates boundary conditions,
-     error states, and edge cases for each task so subagent
-     implementers handle them upfront.
-
-Output: scenario/{date}-{slug}/ with detailed test scenarios
-        per task. These are added to task descriptions or
-        TDD test cases before implementation begins.
-
-After completion:
-  Update .devflow/state → set gate_scenario=done, step=impl
-```
-
-### ③ — Implementation Injection
-
-During `superpowers-subagent-driven-development`:
-
-```yaml
-gitnexus (if Docker available — else skip):
-  - Check docker ps first; if missing → offer Docker Desktop install
-  - If user declines → skip (non-fatal, subagents work without it)
-  - If available, before dispatching each task:
-    .\scripts\gitnexus-docker.ps1 context <目标函数>  (Windows)
-    bash scripts/gitnexus-docker.sh context <target-function>  (Unix)
-  - Include gitnexus output in subagent prompt as additional context
-  - Subagents do NOT run gitnexus themselves
-
-beads:
-  - bd ready (check blocking tasks)
-  - bd update <id> --claim (atomic assignment)
+beads (深度):
+  - bd ready           # 检查阻塞依赖
+  - bd update --claim  # 原子分配
+  - 每个 subagent 完成后记录到 beads note
+  - bd gate set <id>   # 用 beads 原生门禁跟踪进度
 
 tdd-deep-docs:
-  - Reference docs/tdd/*.md for testing philosophy
+  - 引用 docs/tdd/*.md 作为测试哲学参考
 
-autoresearch:fix — Per-Task Quality Gate ★ HARD GATE (per-task):
-  After EACH task implementation completes, before next task:
-  Invoke: $autoresearch fix --target "npm run build && npm test"
-  If :fix finds errors → fix them → re-run → pass gate
-  Only then claim next task
+requesting-code-review:
+  在每个 task 完成后、下一个 task 开始前调用。
+  使用 superpowers 原生的 code-reviewer 模板:
+    1. 获取 BASE_SHA / HEAD_SHA
+    2. 派发 code-reviewer 子 agent
+    3. 修复 Critical/Important 发现
+    4. 记录 Minor 发现
 
-  This is a ZERO-ERROR GATE. Each task must pass before
-  the next one starts.
-  
-  After all tasks pass gate_fix:
-    Update .devflow/state → set gate_fix=done
-  
-  Opt-out: Set gate_fix=skipped (user must explicitly request)
+verification-before-completion:
+  每个 task 完成后：先跑验证命令，看输出，再声称完成。
+  通用门禁 — "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE"
 ```
 
 ### ②¾ — Autoresearch Security Injection ★ HARD GATE
 
-After code review, before finish-branch. **PreToolUse hook blocks `finish` step if gate_security != done.**
+code-review 完成后、finish-branch 前。**PreToolUse hook 在 step=security 时检查 gate_security != done 会拦截。**
 
-> Invokes: `$autoresearch security --diff`
+> 调用: `$autoresearch security --diff`
+> 只审计本次变更的文件
 
 ```yaml
-Enforcement: HARD — hook blocks Edit|Write when step=finish and gate_security=pending
+Enforcement: HARD — hook blocks Edit|Write when step=security and gate_security=pending
 What: $autoresearch security --diff
   Iterations: 10
 
-Why: Last line of defense. Audits only the changed files
-     (--diff mode), applies STRIDE + OWASP Top 10 + red-team
-     analysis with 4 hostile personas.
+Why: 最后一道防线。自动安全审计——STRIDE + OWASP Top 10 + 4 个红队人格。
+     --diff 模式确保只审计本次变更，不扫描全项目。
 
 Output: security/{date}-{slug}/ with structured report.
-        Critical/High findings must be resolved before finish.
+        Critical/High 发现必须修复后才能 finish。
 
 After completion:
-  Update .devflow/state → set gate_security=done, step=finish
+  Update .devflow/state → set gate_security=done, step=optimize
 
-Opt-out: Set gate_security=skipped in .devflow/state (user must explicitly request)
+Opt-out: Set gate_security=skipped in .devflow/state
 ```
 
-### ③¼ — Autoresearch Optimize Prompt ★ INTERACTIVE
+### ③¼ — Autoresearch Optimize ★ 完整循环 (INTERACTIVE)
 
-After security gate passes, before finishing the branch. **Agent must ask the user before proceeding.**
+安全门禁通过后、finish-branch 前。**Agent 必须先问用户。这是唯一的交互式步骤。**
 
-> This is the only autoresearch step that is INTERACTIVE (user decides), not automatic.
+> 调用完整 autoresearch 循环：`/autoresearch:plan` → `/autoresearch` → keep/revert → 记录
 
 ```yaml
 What: Ask the user:
-  "功能已完成并通过所有门禁。是否要运行 autoresearch 自动优化？
+  "功能已完成并通过所有门禁。是否要运行 autoresearch 自动优化循环？
   
   你可以设定一个优化目标，比如：
   - 提高测试覆盖率到 XX%
@@ -800,27 +788,39 @@ What: Ask the user:
   - 代码重构改进
   - 其他自定义目标
   
-  Claude 会自动迭代改进，直到目标达成。
-  不需要的话直接跳过即可。"
+  系统会:
+    1. 启动完整优化循环（修改→验证→保留/回滚→重复）
+    2. 每次修改自动 git commit（experiment: 前缀）
+    3. 失败的修改自动 git revert
+    4. 记录每次迭代结果到 TSV 日志
+    5. 完成后报告哪些改进保留、哪些回滚、净效果"
 
-If user agrees → guide them to set Goal + Scope + Metric:
-  Goal: 用户设定的优化目标
-  Scope: 本次变更的文件范围
-  Metric: 可衡量的指标（如覆盖率%、构建通过、包体积KB）
-  Iterations: 建议 10-15 轮
+If user agrees:
+  1. 引导设置: Goal + Scope + Metric + Iterations (建议 10-15)
+  2. 运行: $autoresearch run --goal "<goal>" --scope "<files>" --metric "<metric>" --iterations 10
+  3. 记录结果到: docs/superpowers/optimize/{date}-{slug}/
+  4. 用户决定 keep 或 revert 优化结果
+  5. 更新 state: phase=5, step=finish
 
-  Then run: $autoresearch
-    Goal: <user goal>
-    Scope: <changed files>
-    Metric: <mechanical metric>
-    Iterations: 10
+If user declines:
+  → Update .devflow/state: phase=5, step=finish
+  → Proceed to Phase 5 close + push
 
-If user declines → proceed to close and push.
+Opt-out: User says "skip optimize"
+```
 
-After completion:
-  Keep or revert based on $autoresearch results
-  Update .devflow/state: phase=5, step=finish
-  Proceed to Phase 5 close + push
+### ⑤ — Finishing a Development Branch (superpowers 原生)
+
+**调用: superpowers-finishing-a-development-branch Skill**
+
+superpowers 原生流程:
+1. 验证测试
+2. 确定 base branch
+3. 提供 4 选项（merge/PR/keep/discard）
+4. 执行选择
+5. 清理 worktree
+
+**然后 → Phase 5 close + push**
 
 Opt-out: User says "no" or "skip optimize"
 ```

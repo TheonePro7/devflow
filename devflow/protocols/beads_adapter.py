@@ -44,13 +44,14 @@ class BeadsAdapter:
         try:
             result = subprocess.run(
                 ["where", "bd"] if sys.platform == "win32" else ["which", "bd"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=5,
+                encoding="utf-8", errors="replace",
             )
             if result.returncode == 0:
                 candidates = result.stdout.strip().split("\n")
-                # Windows: 优先选 .exe, 其次 .cmd, 避免无扩展名的 npm shim
+                # Windows: 优先选 .cmd (npm, 无 CGO 问题), 其次 .exe (Go), 避免无扩展名的 npm shim
                 if sys.platform == "win32":
-                    for ext in (".exe", ".cmd"):
+                    for ext in (".cmd", ".exe"):
                         for c in candidates:
                             if c.strip().lower().endswith(ext):
                                 return c.strip()
@@ -68,6 +69,7 @@ class BeadsAdapter:
                 [self._bd_cmd, "list", "--limit=1"],
                 capture_output=True, text=True, timeout=5,
                 cwd=self.project_path,
+                encoding="utf-8", errors="replace",
             )
             return result.returncode == 0
         except Exception:
@@ -82,7 +84,7 @@ class BeadsAdapter:
         """从本地文件读取状态。"""
         if self._state_file.exists():
             try:
-                with open(self._state_file, "r", encoding="utf-8") as f:
+                with open(self._state_file, "r", encoding="utf-8-sig") as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError):
                 pass
@@ -97,6 +99,7 @@ class BeadsAdapter:
         }
         with open(self._state_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+            f.write("\n")
 
     def _append_local_log(self, phase: str, transitions: str):
         """追加状态记录到本地日志。"""
@@ -120,6 +123,7 @@ class BeadsAdapter:
                 [self._bd_cmd] + args,
                 capture_output=True, text=True, timeout=timeout,
                 cwd=self.project_path,
+                encoding="utf-8", errors="replace",
             )
             return result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
@@ -239,6 +243,7 @@ class BeadsAdapter:
                 ["git", "rev-parse", "--abbrev-ref", "@{u}"],
                 capture_output=True, text=True, timeout=5,
                 cwd=self.project_path,
+                encoding="utf-8", errors="replace",
             )
             if result.returncode != 0:
                 # 没有 upstream（新分支），视为已推送
@@ -248,6 +253,7 @@ class BeadsAdapter:
                 ["git", "log", "--oneline", "@{u}..HEAD"],
                 capture_output=True, text=True, timeout=5,
                 cwd=self.project_path,
+                encoding="utf-8", errors="replace",
             )
             return result.returncode == 0 and not result.stdout.strip()
         except Exception:

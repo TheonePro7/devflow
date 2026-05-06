@@ -797,6 +797,43 @@ devflow/
 ├── LICENSE                         # MIT License
 ├── .gitignore                      # 排除 node_modules/ + settings.local.json
 │
+├── devflow/                        # Python CLI 引擎（pip install -e .）
+│   ├── __init__.py
+│   ├── cli/                        # 13 个子命令
+│   │   ├── main.py                 # CLI 入口（state/init/transition/gate/sync/...）
+│   │   ├── init_cmd.py             # devflow init — beads + gitnexus + autoresearch 自动安装
+│   │   ├── ideate_cmd.py           # devflow ideate — 4 阶段交互式需求梳理
+│   │   ├── prd_cmd.py              # devflow prd — ideate JSON → PRD markdown
+│   │   ├── bootstrap_cmd.py        # devflow bootstrap — 一键 init → doctor → ideate → PRD
+│   │   ├── transition_cmd.py       # devflow transition — 5 阶段状态转移
+│   │   ├── state_cmd.py            # devflow state — 查看当前阶段
+│   │   ├── log_cmd.py              # devflow log — 状态转移时间线
+│   │   ├── task_cmd.py             # devflow task — 任务管理（create/list/show）
+│   │   ├── dev_cmd.py              # devflow dev — 开发循环（start/finish/next/status）
+│   │   ├── gate_cmd.py             # devflow gate — 门禁管理
+│   │   ├── sync_cmd.py             # devflow sync — 同步状态
+│   │   ├── doctor_cmd.py           # devflow doctor — 一键环境诊断
+│   │   ├── help_cmd.py             # devflow guide — 工作流地图
+│   │   └── gate_cmd.py             # devflow gate — 4 种门禁条件
+│   ├── engine/                     # 核心引擎
+│   │   ├── state_machine.py        # 5 阶段状态机（Phase dataclass + StateMachine）
+│   │   ├── gates.py                # 4 硬编码门禁条件 + escalation 3 次重试
+│   │   └── escalation.py           # 失败记录 → 人工介入
+│   ├── protocols/                  # 工具适配器
+│   │   ├── beads_adapter.py        # beads CLI 包装（条件检测 + 状态记录）
+│   │   ├── gitnexus_adapter.py     # gitnexus CLI + Docker 回退（Windows SIGSEGV 绕过）
+│   │   └── autoresearch_adapter.py # autoresearch 4 门（probe/security/optimize/fix）
+│   ├── utils.py                    # 共享工具（detect_test_commands）
+│   └── data/
+│       └── phases.json             # 5 阶段定义 + 条件
+│
+├── pyproject.toml                  # Python 包配置（pip install -e .）
+├── tests/                          # 55 个测试（43 单元 + 12 集成）
+│   ├── test_state_machine.py       # 状态机测试
+│   ├── test_gates.py               # 门禁测试
+│   ├── test_escalation.py          # 升级机制测试
+│   └── test_integration.py         # 端到端集成测试（子进程运行）
+│
 ├── .github/workflows/
 │   └── ci.yml                      # GitHub Actions CI（guardrails + merge 测试）
 │
@@ -897,6 +934,26 @@ devflow/
         ├── refactoring.md           # 重构模式：一次一步
         └── tests.md                 # 测试哲学：测试行为而非实现
 ```
+
+---
+
+### CLI 快速参考
+
+| 命令 | 用途 |
+|------|------|
+| `devflow init` | 初始化项目（beads + gitnexus + autoresearch 自动安装）|
+| `devflow ideate` | 4 阶段交互式需求梳理 |
+| `devflow prd` | ideate JSON → PRD markdown |
+| `devflow bootstrap` | 一键 `init → doctor → CONTEXT.md → transition → ideate` |
+| `devflow state` | 查看当前阶段 |
+| `devflow transition phase-N/start` | 进入下一阶段 |
+| `devflow log` | 查看状态转移历史 |
+| `devflow task create/list/show` | 任务管理 |
+| `devflow dev start/finish/next/status` | 开发循环 |
+| `devflow gate check/run-impact-analysis/...` | 门禁管理 |
+| `devflow sync` | 同步状态 |
+| `devflow doctor` | 环境诊断 |
+| `devflow guide` | 工作流地图 |
 
 ---
 

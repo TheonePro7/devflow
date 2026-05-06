@@ -17,6 +17,8 @@ from devflow.cli.log_cmd import run_log
 from devflow.cli.dev_cmd import run_dev
 from devflow.cli.doctor_cmd import run_doctor
 from devflow.cli.help_cmd import run_help
+from devflow.cli.prd_cmd import run_prd
+from devflow.cli.bootstrap_cmd import run_bootstrap
 
 
 def _setup_encoding():
@@ -83,6 +85,18 @@ def main(argv: list[str] | None = None):
     p_log.add_argument("--tail", type=int, default=0, help="只看最近 N 条")
     p_log.add_argument("--json", action="store_true", help="JSON 格式输出")
     p_log.set_defaults(func=run_log)
+
+    # bootstrap
+    p_bootstrap = subparsers.add_parser("bootstrap", help="新项目快速开始")
+    p_bootstrap.add_argument("--path", help="项目路径（默认当前目录）")
+    p_bootstrap.set_defaults(func=run_bootstrap)
+
+    # prd
+    p_prd = subparsers.add_parser("prd", help="从 ideate 生成 PRD markdown")
+    p_prd.add_argument("--path", help="项目路径（默认当前目录）")
+    p_prd.add_argument("--title", help="PRD 标题（默认从回答自动提取）")
+    p_prd.add_argument("--force", action="store_true", help="覆盖已有文件")
+    p_prd.set_defaults(func=run_prd)
 
     # guide
     p_guide = subparsers.add_parser("guide", help="工作流地图引导")

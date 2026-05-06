@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -139,7 +140,28 @@ def run_ideate(args: argparse.Namespace):
             resp = "n"
 
         if resp in ("", "y", "yes"):
-            _create_epic_from_ideate(bead_adapter, results, project_path)
+            epic_id = _create_epic_from_ideate(bead_adapter, results, project_path)
+            # 询问是否生成 PRD
+            try:
+                resp2 = input("  是否从 IDEATE 生成 PRD markdown？(Y/n): ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                resp2 = "n"
+            if resp2 in ("", "y", "yes"):
+                try:
+                    from devflow.cli.prd_cmd import run_prd
+                    title = next(
+                        (a["answer"].split("\n")[0][:60] for a in results.get("answers", {}).values() if a.get("answer")),
+                        None
+                    )
+                    prd_args = argparse.Namespace(
+                        path=str(project_path),
+                        title=title,
+                        force=False,
+                        func=lambda x: None,
+                    )
+                    run_prd(prd_args)
+                except Exception as e:
+                    print(f"  ⚠️  PRD 生成失败: {e}")
     else:
         print(f"\n  ⚠️  完成了 {len(answers)}/4 阶段。")
         print(f"  用 devflow ideate --resume 继续\n")

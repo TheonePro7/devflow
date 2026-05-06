@@ -86,7 +86,15 @@
       "Bash(python -m pytest tests/ -v)",
       "Bash(devflow ideate *)",
       "Bash(devflow log *)",
-      "Bash(rm -f .devflow/ideate.json)"
+      "Bash(rm -f .devflow/ideate.json)",
+      "Bash(devflow dev *)",
+      "Bash(devflow doctor *)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(devflow guide *)",
+      "Bash(devflow prd *)",
+      "Bash(devflow bootstrap *)",
+      "Bash(python -m pytest tests/ -v -m integration)",
+      "PowerShell(git add devflow/cli/prd_cmd.py devflow/cli/bootstrap_cmd.py tests/test_integration.py devflow/cli/ideate_cmd.py devflow/cli/main.py .claude/settings.json)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",

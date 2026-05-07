@@ -960,46 +960,74 @@ devflow/
 
 ## 十一、安装与初始化
 
-### 全新安装
+devflow 提供两种使用方式，按你的需求选一种。
 
-用户只需确保系统有 **Go**、**Node.js >= 18**、**Git**。其他全部自动。
+### 方式 A：作为 CLI 全局安装（推荐）
+
+其他项目想用 `devflow state/sync/doctor` 等 CLI 命令时：
 
 ```bash
-# 1. 克隆 devflow skill
-git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
+# 从项目目录安装
+git clone https://github.com/TheonePro7/devflow.git
+cd devflow
+pip install -e .
 
-# 2. 进入项目目录，运行一键安装器
+# 验证
+devflow --version   # → devflow 0.1.0
+devflow doctor      # → 环境诊断
+```
+
+安装后在任何目录都能用 `devflow` 命令。各个项目只需在根目录放 `.devflow/state` 文件即可。
+
+如果不想 clone，也可以直接从 GitHub 安装：
+
+```bash
+pip install git+https://github.com/TheonePro7/devflow.git
+```
+
+### 方式 B：注入到项目（全功能 5 阶段编排）
+
+新项目想走完整 5 阶段流程（hooks、guardrails、beads、gitnexus、autoresearch）：
+
+**前提**：系统有 **Go**、**Node.js >= 18**、**Git**。
+
+```bash
+# 一行命令注入到当前项目
+git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
 cd your-project
 bash ~/.claude/skills/devflow/install.sh
-
-# 3. 在 Claude Code 中安装 superpowers 插件
-# 在 chat 中输入: /plugin install superpowers@claude-plugins-official
-
-# 4. 完成 --- 直接开始提需求开发
 ```
 
-**install.sh / install.ps1** 自动完成：
-1. 检测 Go、Node.js、Git 是否安装（缺失则提示）
-2. 克隆 devflow 到 `~/.claude/skills/devflow`（已有则跳过）
-3. 检测 superpowers skill 是否就绪
-4. 以 **merge 模式**运行 setup（保留所有已有配置）
-5. 输出后续操作提示
-
-> **零手动安装**：beads、gitnexus、autoresearch 均为自动安装。
-> 用户不需要手动 `go install`、`npm install -g` 或手动配置 hooks。
-
-#### 离线安装
+install 脚本自动完成：
+1. 检测 Go/Node.js/Git 是否安装
+2. 安装 beads、gitnexus（通过 npx/Docker）、autoresearch
+3. 注册 hooks（SessionStart/UserPromptSubmit/PreToolUse）
+4. 写入 CLAUDE.md 最高指示
+5. 创建 `.devflow/state` 和 docs/ 目录
 
 ```bash
-# 已有 devflow 副本时跳过克隆
+# 离线安装
 bash ~/.claude/skills/devflow/install.sh --offline
-```
 
-#### 通过代理安装
+# 跳过 autoresearch
+bash ~/.claude/skills/devflow/install.sh --skip-autoresearch
 
-```bash
+# 通过代理
 GIT_PROXY=http://proxy:8080 bash ~/.claude/skills/devflow/install.sh
+
+# Windows PowerShell
+powershell -File ~/.claude/skills/devflow/install.ps1
+powershell -File ~/.claude/skills/devflow/install.ps1 -Offline
 ```
+
+安装完成后，在 Claude Code 中输入 `用 devflow 开发` 即可启动 5 阶段流程。
+
+> 如果之前已经 clone 过，只需更新到最新版：
+> ```bash
+> cd ~/.claude/skills/devflow && git pull
+> cd your-project
+> bash ~/.claude/skills/devflow/install.sh
+> ```
 
 #### Windows PowerShell
 

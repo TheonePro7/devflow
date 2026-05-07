@@ -10,23 +10,31 @@ devflow is a full-lifecycle product orchestrator skill for [Claude Code](https:/
 
 ## Quick Start
 
+Two ways to use devflow:
+
+### A) Install as global CLI (recommended)
+
+```bash
+pip install git+https://github.com/TheonePro7/devflow.git
+
+# Verify
+devflow --version   # → devflow 0.1.0
+devflow doctor      # → environment diagnostics
+```
+
+Now `devflow state/sync/doctor` works in any project with a `.devflow/state` file.
+
+### B) Full 5-phase injection into a project
+
 **Prerequisites:** Go, Node.js >= 18, Git.
 
 ```bash
-# 1. Clone devflow skill (one-time)
 git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
-
-# 2. Run installer from your project directory
 cd your-project
 bash ~/.claude/skills/devflow/install.sh
-
-# 3. In Claude Code, type once:
-# /plugin install superpowers@claude-plugins-official
-
-# Done. Start a development task.
 ```
 
-The installer auto-detects your OS, checks prerequisites, clones devflow, runs setup in **merge mode** (preserves all existing configs), and installs beads + gitnexus. See [Install & Setup](#install--setup) for details.
+The installer auto-detects your OS, checks prerequisites, clones devflow, runs setup in **merge mode** (preserves all existing configs), and installs beads + gitnexus + autoresearch. See [Install & Setup](#install--setup) for details.
 
 ---
 

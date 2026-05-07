@@ -12,6 +12,43 @@ devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到
 
 ---
 
+## 快速开始
+
+### 方式 A：作为 CLI 全局安装（推荐）
+
+其他项目想用 `devflow state/sync/doctor` 等 CLI 命令时：
+
+```bash
+pip install git+https://github.com/TheonePro7/devflow.git
+
+# 验证
+devflow --version   # → devflow 0.1.0
+devflow doctor      # → 环境诊断
+```
+
+安装后在任何目录都能用 `devflow` 命令。各个项目只需在根目录放 `.devflow/state` 文件即可。
+
+### 方式 B：注入到项目（全功能 5 阶段编排）
+
+新项目想走完整 5 阶段流程（hooks、guardrails、beads、gitnexus、autoresearch）：
+
+**前提**：系统有 **Go**、**Node.js >= 18**、**Git**。
+
+```bash
+# 一行命令注入到当前项目
+git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
+cd your-project
+bash ~/.claude/skills/devflow/install.sh
+```
+
+install 脚本自动完成：安装 beads/gitnexus/autoresearch、注册 hooks、写入 CLAUDE.md 最高指示、创建 `.devflow/state` 和 docs/ 目录。
+
+安装完成后，在 Claude Code 中输入 `用 devflow 开发` 即可启动 5 阶段流程。
+
+见[安装与初始化](#十一安装与初始化)了解更多选项（离线安装、代理安装、Windows PowerShell）。
+
+---
+
 ## 目录
 
 - [一、核心架构](#一核心架构)

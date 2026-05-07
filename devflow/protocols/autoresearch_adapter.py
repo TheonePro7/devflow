@@ -17,16 +17,38 @@ class AutoresearchAdapter:
     # ========== 可用性 ==========
 
     def is_available(self) -> bool:
-        """检查 autoresearch 是否可用。"""
+        """检查 autoresearch 是否可用。优先检测文件路径，后备 npx。"""
+        ok, _ = self._check_files()
+        if ok:
+            return True
         ok, _ = self._run_skill("autoresearch", "--help")
         return ok
 
     def check_available(self) -> tuple[bool, str]:
         """检查可用性并返回模式说明。"""
+        ok, mode = self._check_files()
+        if ok:
+            return True, mode
         ok, out = self._run_skill("autoresearch", "--help")
         if ok:
-            return True, "skill"
+            return True, "npx"
         return False, out.strip()[:200] if out else "不可用"
+
+    @staticmethod
+    def _check_files() -> tuple[bool, str]:
+        """检查 autoresearch 安装文件路径。"""
+        home = Path.home()
+        cwd = Path.cwd()
+        check_paths = [
+            (home / ".claude" / "skills" / "autoresearch" / "SKILL.md", ".claude/skills"),
+            (home / ".agents" / "skills" / "autoresearch" / "SKILL.md", ".agents/skills"),
+            (cwd / ".agents" / "skills" / "autoresearch" / "SKILL.md", "project/.agents/skills"),
+            (cwd / ".claude" / "skills" / "autoresearch" / "SKILL.md", "project/.claude/skills"),
+        ]
+        for p, label in check_paths:
+            if p.exists():
+                return True, label
+        return False, ""
 
     # ========== 门禁功能 ==========
 

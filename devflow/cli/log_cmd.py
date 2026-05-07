@@ -27,12 +27,12 @@ def run_log(args: argparse.Namespace):
                 except json.JSONDecodeError:
                     pass
 
-    if args.json:
-        print(json.dumps(entries, ensure_ascii=False, indent=2))
-        return
-
     tail = args.tail or len(entries)
     show = entries[-tail:] if tail < len(entries) else entries
+
+    if args.json:
+        print(json.dumps(show, ensure_ascii=False, indent=2))
+        return
 
     print(f"\n  📜 devflow 状态时间线{' (最近 ' + str(tail) + ' 条)' if tail < len(entries) else ''}\n")
     print(f"  {'=' * 56}\n")

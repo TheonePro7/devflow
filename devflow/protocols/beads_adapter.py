@@ -81,13 +81,29 @@ class BeadsAdapter:
     # ========== 本地降级存储（当 beads 不可用时） ==========
 
     def _read_local_state(self) -> dict:
-        """从本地文件读取状态。"""
-        if self._state_file.exists():
-            try:
-                with open(self._state_file, "r", encoding="utf-8-sig") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, IOError):
-                pass
+        """从本地文件读取状态。
+
+        优先读 .devflow/state.json（CLI 标准），
+        不存在时读 .devflow/state（hooks 标准）。
+        """
+        candidates = [
+            self._state_file,  # .devflow/state.json
+            self.project_path / ".devflow" / "state",  # .devflow/state (hooks)
+        ]
+        for path in candidates:
+            if path.exists():
+                try:
+                    with open(path, "r", encoding="utf-8-sig") as f:
+                        data = json.load(f)
+                    # 标准化 phase 字段：数字→字符串，如 5 → "phase-5"
+                    phase = data.get("phase", "phase-0")
+                    if isinstance(phase, int):
+                        phase = f"phase-{phase}"
+                    elif isinstance(phase, str) and not phase.startswith("phase-"):
+                        phase = f"phase-{phase}"
+                    return {"phase": phase, "updated_at": data.get("updatedAt", data.get("updated_at", ""))}
+                except (json.JSONDecodeError, IOError):
+                    pass
         return {"phase": "phase-0", "updated_at": ""}
 
     def _write_local_state(self, phase: str):

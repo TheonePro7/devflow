@@ -61,15 +61,14 @@ def run_sync(args: argparse.Namespace):
     results["superpowers"] = {"available": sp_available}
     print(f"    {'✅' if sp_available else '⚠️'} {'已安装' if sp_available else '未检测到'}")
 
-    # 写入 beads
-    if bead_adapter.is_available():
-        summary = (
-            f"beads={'ok' if results['beads']['available'] else 'local'}, "
-            f"gitnexus={'ok' if results['gitnexus']['available'] else 'no'}, "
-            f"autoresearch={'ok' if results['autoresearch']['available'] else 'no'}, "
-            f"superpowers={'ok' if results['superpowers']['available'] else 'no'}"
-        )
-        bead_adapter.create_state_record("sync", f"tools: {summary}")
+    # 仅追加日志，不污染 phase 状态
+    summary = (
+        f"beads={'ok' if results['beads']['available'] else 'local'}, "
+        f"gitnexus={'ok' if results['gitnexus']['available'] else 'no'}, "
+        f"autoresearch={'ok' if results['autoresearch']['available'] else 'no'}, "
+        f"superpowers={'ok' if results['superpowers']['available'] else 'no'}"
+    )
+    bead_adapter._append_local_log("sync", f"tools: {summary}")
 
     print(f"\n  ✅ 同步完成\n")
 

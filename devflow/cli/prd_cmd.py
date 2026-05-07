@@ -138,9 +138,9 @@ def run_prd(args: argparse.Namespace):
     prd_path.write_text(prd_content, encoding="utf-8")
     print(f"\n  ✅ PRD 已生成: {prd_path}\n")
 
-    # 更新 beads 记录
+    # 更新 beads 记录（作为笔记，不影响 phase 状态）
     from devflow.protocols.beads_adapter import BeadsAdapter
     adapter = BeadsAdapter(project_path)
     summary = f"PRD generated: {title}"
-    adapter.create_state_record("prd", summary)
+    adapter._append_local_log("prd-generated", summary)
     print(f"  💾 状态记录已保存\n")

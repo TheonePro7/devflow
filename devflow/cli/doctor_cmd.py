@@ -75,7 +75,7 @@ def _check_beads() -> tuple[bool, str]:
         )
         if r.returncode == 0:
             candidates = r.stdout.strip().split("\n")
-            for ext in (".exe", ".cmd"):
+            for ext in (".cmd", ".exe"):
                 for c in candidates:
                     if c.strip().lower().endswith(ext):
                         return True, f"{c.strip()}"

@@ -106,6 +106,7 @@ def _ensure_beads(project_path: Path, force: bool) -> bool:
                 ["bd", "init", "--quiet"],
                 capture_output=True, text=True, timeout=15,
                 cwd=project_path,
+                encoding="utf-8", errors="replace",
             )
             return True
         else:

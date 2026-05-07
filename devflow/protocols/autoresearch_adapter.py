@@ -114,6 +114,7 @@ class AutoresearchAdapter:
                 text=True,
                 timeout=timeout,
                 cwd=self.project_path,
+                encoding="utf-8", errors="replace",
             )
             stdout = result.stdout
             stderr = result.stderr
@@ -160,6 +161,7 @@ class AutoresearchAdapter:
                 ["npx", "--yes", "skills", "run", cmd],
                 capture_output=True, text=True, timeout=timeout,
                 cwd=self.project_path,
+                encoding="utf-8", errors="replace",
             )
             return result.returncode == 0, result.stdout, result.stderr
         except subprocess.TimeoutExpired:

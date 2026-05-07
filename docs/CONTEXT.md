@@ -34,7 +34,12 @@ superpowers-brainstorming 强制要求：必须先呈现设计给用户批准，
 devflow 的 Phase 4 第一步对齐此门禁。
 
 ### Autoresearch
-3 重角色：probe（brainstorming 之后，对抗人格约束发现 — HARD GATE）→ security（finish-branch 之前，STRIDE+OWASP — HARD GATE）→ optimize（交互式完整循环，用户决定）。
+autoresearch 是 SKILL.md（prompt 集合），不是可执行 CLI。
+devflow 的 `AutoresearchAdapter` 内置实现核心逻辑：
+  - `security()` — 自动扫描 shell=True 调用、敏感文件泄露等常见安全问题
+  - `probe()` / `fix()` — 引导上层用子代理加载 autoresearch SKILL.md
+  - `run_verification()` — 直接运行测试命令（不依赖 autoresearch）
+适配器不再调用不存在的 `npx skills run` 接口。
 状态追踪：`.devflow/state` 中的 `gate_probe/gate_security`（取值: pending, done, skipped）。
 默认开启。关闭: `DEVFLOW_NO_AUTORESEARCH=1`。单门跳过：设置对应 gate 字段为 `skipped`。
 

@@ -122,7 +122,8 @@ p_xxx.set_defaults(func=run_xxx)
 
 - 4 个硬编码条件（`gates.py:TASK_CLOSE_CONDITIONS`）
 - `can_close_task(task_dict, adapter)` → bool + 详细结果
-- `record_gate_failure()` + `should_escalate()` → 3 次失败升级
+- `record_gate_failure()` 委托给 `escalation.py` → 3 次失败升级
+- `EscalationStore` 持久化到 `.devflow/escalation.json`，进程重启不丢失
 
 ### Protocols Layer（适配器层）
 
@@ -131,8 +132,9 @@ p_xxx.set_defaults(func=run_xxx)
 **关键约束**：
 
 1. **所有 subprocess.run 必须带编码**：`encoding="utf-8", errors="replace"`
-2. **所有 npx 调用必须带 --yes**：避免交互弹窗挂起
-3. **fail-fast vs fail-soft**: beads 不可用降级到文件；gitnexus 不可用跳过；autoresearch 不可用跳过
+2. **npx 调用只在必要时加 --yes**：需要交互的工具不加（autoresearch 适配器不再调用 npx）
+3. **fail-fast vs fail-soft**: beads 不可用降级到文件；gitnexus 不可用跳过；autoresearch 适配器内置实现，无外部依赖，不跳过
+4. **gates.py 不再维护独立 escalation 状态**：`record_gate_failure` 委托给 `escalation.py`
 
 ---
 

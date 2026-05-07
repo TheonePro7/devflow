@@ -1,6 +1,6 @@
 # Devflow Engine 设计文档
 
-> 状态: **已实现** | 最后更新: 2026-05-07
+> 状态: **已实现** | 最后更新: 2026-05-07 (v2)
 > 对应版本: devflow v1.0.0 (Python CLI)
 
 ---
@@ -105,7 +105,7 @@ devflow/
 │   ├── __init__.py
 │   ├── beads_adapter.py        # beads 适配器 (CLI + 本地降级)
 │   ├── gitnexus_adapter.py     # gitnexus 适配器 (原生 + Docker)
-│   └── autoresearch_adapter.py # autoresearch 适配器 (npx skills run)
+│   └── autoresearch_adapter.py # autoresearch 适配器 (内置实现)
 └── storage/                # 预留存储层
     └── __init__.py
 ```
@@ -259,7 +259,9 @@ devflow gate close <task_id>
     └─ 人确认后 → mark_resolved() 重置状态
 ```
 
-升级状态为进程级内存存储（`_escalations` 字典），设计上后续可迁移到 beads。
+升级状态持久化到 `.devflow/escalation.json`（`EscalationStore` 类），进程重启不丢失。
+未指定 `project_path` 时使用内存模式（单元测试用）。
+`gates.py` 的 `record_gate_failure` 委托给 `escalation.py`，两套代码已合并。
 
 ---
 
@@ -269,7 +271,7 @@ devflow gate close <task_id>
 |---|---|---|
 | `devflow state` | 显示当前阶段、条件、可用操作 | `--path` |
 | `devflow init` | 初始化项目（自动安装工具） | `--path`, `--force`, `--skip-beads` |
-| `devflow transition` | 状态转移（必须先满足条件） | `--path`, `--dry-run`, `target` |
+| `devflow transition` | 状态转移（前进需条件检查，回退自由通行） | `--path`, `--dry-run`, `target` |
 | `devflow gate` | 门禁管理 | `action={check,close,run-*}` |
 | `devflow task` | 任务管理 | `action={create,list,show}` |
 | `devflow dev` | 开发循环自动化 | `action={start,finish,next,status}` |
@@ -328,15 +330,16 @@ devflow gate close <task_id>
 
 **核心职责**：安全审计、测试验证、优化循环。
 
-**调用方式**：`npx --yes skills run autoresearch:<cmd>`
+**注意**：autoresearch 本身是 SKILL.md（prompt 集合），不是可执行 CLI。
+因此适配器不依赖 `npx skills run`，而是直接内置实现核心逻辑：
 
 **核心方法**：
-- `probe(context)` — 对抗人格约束发现（8 人格审视）
-- `security(diff_mode)` — STRIDE + OWASP 安全审计
-- `optimize(goal, n_iterations)` — 完整优化循环
-- `fix()` — 迭代修复到零错误
-- `debug(symptom)` — 自主 bug 追查
-- `run_verification(command)` — 验证命令执行
+- `probe(context)` — 返回提示信息，引导上层用子代理加载 autoresearch SKILL.md
+- `security(diff_mode)` — **内置实现**：扫描 shell=True 调用、敏感文件不在 .gitignore 等
+- `optimize(goal, n_iterations)` — 返回提示信息，引导上层启动子代理
+- `fix()` — 返回提示信息
+- `debug(symptom)` — 返回提示信息
+- `run_verification(command)` — **保留**：直接运行测试/构建命令（不依赖 autoresearch）
 
 **所有 subprocess.run 必须**：`encoding="utf-8", errors="replace"`
 

@@ -36,3 +36,9 @@ skills-lock.json
 .devflow/epics.json
 .devflow/ideate.json
 .devflow/decisions.json
+
+# Early research docs (not part of the project)
+research/
+
+# Tests cache
+.pytest_cache/

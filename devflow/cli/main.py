@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None):
         prog="devflow",
         description="自主工程引擎 — 从模糊创意到可交付产品的 AI 工作流编排器",
     )
-    parser.add_argument("--version", action="version", version="devflow 0.1.0")
+    parser.add_argument("--version", action="version", version="devflow 1.0.0")
 
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 

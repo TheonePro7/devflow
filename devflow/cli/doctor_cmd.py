@@ -49,7 +49,7 @@ def run_doctor(args: argparse.Namespace):
             print(f"  运行 devflow doctor --fix 尝试自动修复\n")
 
     # 概要
-    print(f"  devflow v0.1.0 | {project_path}\n")
+    print(f"  devflow v1.0.0 | {project_path}\n")
 
 
 def _check_python_version() -> tuple[bool, str]:

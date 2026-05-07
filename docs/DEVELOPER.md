@@ -15,7 +15,7 @@ cd devflow
 pip install -e .
 
 # 验证
-devflow --version  # → devflow 0.1.0
+devflow --version  # → devflow 1.0.0
 devflow state      # → 当前阶段
 ```
 

@@ -1,7 +1,7 @@
 # Devflow Engine 设计文档
 
 > 状态: **已实现** | 最后更新: 2026-05-07
-> 对应版本: devflow v0.1.0 (Python CLI)
+> 对应版本: devflow v1.0.0 (Python CLI)
 
 ---
 

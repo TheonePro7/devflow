@@ -22,7 +22,7 @@ devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到
 pip install git+https://github.com/TheonePro7/devflow.git
 
 # 验证
-devflow --version   # → devflow 0.1.0
+devflow --version   # → devflow 1.0.0
 devflow doctor      # → 环境诊断
 ```
 
@@ -1010,7 +1010,7 @@ cd devflow
 pip install -e .
 
 # 验证
-devflow --version   # → devflow 0.1.0
+devflow --version   # → devflow 1.0.0
 devflow doctor      # → 环境诊断
 ```
 

@@ -16,7 +16,7 @@ devflow is a full-lifecycle product orchestrator skill for [Claude Code](https:/
 pip install git+https://github.com/TheonePro7/devflow.git
 
 # Verify
-devflow --version   # → devflow 0.1.0
+devflow --version   # → devflow 1.0.0
 devflow doctor      # → environment diagnostics
 ```
 
@@ -50,7 +50,7 @@ Two ways to use devflow:
 pip install git+https://github.com/TheonePro7/devflow.git
 
 # Verify
-devflow --version   # → devflow 0.1.0
+devflow --version   # → devflow 1.0.0
 devflow doctor      # → environment diagnostics
 ```
 

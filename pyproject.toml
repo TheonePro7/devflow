@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devflow"
-version = "0.1.0"
+version = "1.0.0"
 description = "自主工程引擎 — 从模糊创意到可交付产品的 AI 工作流编排器"
 requires-python = ">=3.10"
 dependencies = []

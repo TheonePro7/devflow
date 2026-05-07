@@ -10,7 +10,6 @@ from devflow.engine.gates import (
     get_failed_conditions,
     can_close_task,
     record_gate_failure,
-    get_escalation_key,
 )
 
 
@@ -136,8 +135,9 @@ class TestEscalation:
         assert state.retries == 2
 
     def test_key_uniqueness(self):
-        k1 = get_escalation_key("gate_a", "task-1")
-        k2 = get_escalation_key("gate_b", "task-1")
-        k3 = get_escalation_key("gate_a", "task-2")
-        assert k1 != k2
-        assert k1 != k3
+        # record_gate_failure 委托给 escalation 模块，不同的 gate/task 组合 key 不同
+        s1 = record_gate_failure("gate_a", "task-1")
+        s2 = record_gate_failure("gate_b", "task-1")
+        s3 = record_gate_failure("gate_a", "task-2")
+        # 各自独立计数
+        assert s1.retries == 1 and s2.retries == 1 and s3.retries == 1

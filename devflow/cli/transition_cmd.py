@@ -11,6 +11,14 @@ from devflow.engine.state_machine import StateMachine
 from devflow.protocols.beads_adapter import BeadsAdapter
 
 
+def _phase_index(phase_id: str, order: list[str]) -> int | None:
+    """返回 phase_id 在 phases_order 中的索引，未找到返回 None。"""
+    try:
+        return order.index(phase_id)
+    except ValueError:
+        return None
+
+
 def run_transition(args: argparse.Namespace):
     """执行状态转移。"""
     project_path = Path(args.path) if args.path else Path.cwd()
@@ -35,6 +43,8 @@ def run_transition(args: argparse.Namespace):
         return
 
     # 解析目标
+    phases_order = sm.phases_order
+
     if args.target == f"{current_id}/complete":
         target_phase = sm.get_next_phase_id(current_id)
         if not target_phase:
@@ -45,21 +55,39 @@ def run_transition(args: argparse.Namespace):
         if target_id not in sm.phases:
             print(f"  ❌ 未知目标阶段: {target_id}")
             sys.exit(1)
-        if not current_id or sm.get_next_phase_id(current_id) != target_id:
-            print(f"  ❌ 不能从 {current_id} 跳转到 {target_id}（只能进入下一个阶段）")
+
+        current_idx = _phase_index(current_id, phases_order)
+        target_idx = _phase_index(target_id, phases_order)
+
+        if current_idx is not None and target_idx is not None and target_idx > current_idx:
+            # 向后跳转（回到前面的阶段）— 自由通行，不检查条件
+            target_phase = target_id
+        elif current_idx is not None and target_idx is not None and target_idx == current_idx + 1:
+            # 正常前进到下一阶段
+            target_phase = target_id
+        elif current_idx is not None and target_idx is not None and target_idx <= current_idx:
+            # 回退到当前或更前的阶段 — 自由通行
+            target_phase = target_id
+        else:
+            print(f"  ❌ 不能从 {current_id} 跳转到 {target_id}")
             sys.exit(1)
-        target_phase = target_id
     else:
         print(f"  ❌ 无效的目标格式: {args.target}")
         print(f"    格式: phase-N/start 或 phase-N/complete")
         sys.exit(1)
 
-    # 检查条件
-    if not args.dry_run:
+    # 判断是否为回退（向后跳转）— 回退跳过条件检查
+    current_idx = _phase_index(current_id, phases_order)
+    target_idx = _phase_index(target_phase, phases_order)
+    is_rollback = current_idx is not None and target_idx is not None and target_idx <= current_idx
+
+    if is_rollback:
+        can, failed = True, []
+    elif not args.dry_run:
         can, failed = sm.can_transition(current_id, bead_adapter)
     else:
         can, failed = True, []
-        _ = sm.get_state(bead_adapter)  # 只是验证阶段存在
+        _ = sm.get_state(bead_adapter)
 
     if not can:
         print(f"\n  ❌ 无法从 {current_id} 转移到 {target_phase}\n")

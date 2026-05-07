@@ -81,6 +81,7 @@ class StateMachine:
             self.phases[phase_id] = Phase.from_dict(phase_id, phase_data)
         self.entry = data["flow"]["entry"]
         self.terminal = data["flow"]["terminal"]
+        self.phases_order: list[str] = data["flow"].get("phases_order", list(self.phases.keys()))
 
     def get_phase(self, phase_id: str) -> Optional[Phase]:
         return self.phases.get(phase_id)

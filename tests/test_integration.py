@@ -116,3 +116,54 @@ class TestIntegration:
             assert log_file.exists()
             content = log_file.read_text(encoding="utf-8")
             assert "phase-0" in content
+
+    def test_transition_rollback(self):
+        """回退到前面的阶段应跳过条件检查直接成功。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            _run_devflow("init", "--path", str(path))
+            # 通过直接写 state.json 和 state 两个文件确保 beads 降级路径能读到
+            self._set_phase(path, "phase-3")
+            out = _run_devflow("transition", "phase-1/start", "--path", str(path))
+            assert "phase-1" in out
+
+    def test_transition_rollback_current_phase(self):
+        """回退到当前所在的同一个阶段应允许。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            _run_devflow("init", "--path", str(path))
+            self._set_phase(path, "phase-2")
+            out = _run_devflow("transition", "phase-2/start", "--path", str(path))
+            assert "phase-2" in out
+
+    def test_transition_rollback_from_phase5(self):
+        """从 phase-5 回退到 phase-1 应该成功（终端阶段也能回退）。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            _run_devflow("init", "--path", str(path))
+            self._set_phase(path, "phase-5")
+            out = _run_devflow("transition", "phase-1/start", "--path", str(path))
+            assert "phase-1" in out
+
+    def test_transition_rollback_unknown_phase(self):
+        """回退到不存在的 phase 应报错。"""
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            # 不需要 init——直接写 state 文件模拟已有项目
+            (path / ".devflow").mkdir(exist_ok=True)
+            self._set_phase(path, "phase-3")
+            result = subprocess.run(
+                [sys.executable, "-m", "devflow.cli.main",
+                 "transition", "phase-99/start", "--path", str(path)],
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
+            )
+            assert result.returncode != 0
+            assert "未知目标阶段" in result.stdout
+
+    @staticmethod
+    def _set_phase(path: Path, phase_id: str):
+        """同时写 state.json 和 state 文件，确保 beads 降级路径能读到。"""
+        data = json.dumps({"phase": phase_id, "updated_at": "2026-01-01T00:00:00"})
+        (path / ".devflow" / "state.json").write_text(data, encoding="utf-8")
+        (path / ".devflow" / "state").write_text(data, encoding="utf-8")

@@ -72,34 +72,14 @@ TASK_CLOSE_CONDITIONS = [
 ]
 
 
-@dataclass
-class EscalationState:
-    """升级状态追踪。"""
-    gate_id: str
-    task_id: str
-    retries: int = 0
-    escalated: bool = False
-
-    def should_escalate(self) -> bool:
-        return self.retries >= 3 and not self.escalated
-
-
-# 全局升级状态
-_escalations: dict[str, EscalationState] = {}
-
-
-def get_escalation_key(gate_id: str, task_id: str) -> str:
-    return f"{gate_id}:{task_id}"
+from devflow.engine.escalation import record_failure as _record_escalation_failure
 
 
 def record_gate_failure(gate_id: str, task_id: str):
-    """记录一次 gate 失败，达到阈值返回升级提示。"""
-    key = get_escalation_key(gate_id, task_id)
-    if key not in _escalations:
-        _escalations[key] = EscalationState(gate_id=gate_id, task_id=task_id)
-    state = _escalations[key]
-    state.retries += 1
-    return state
+    """记录一次 gate 失败委托给 escalation 模块。返回兼容对象。"""
+    record = _record_escalation_failure(task_id, gate_id)
+    # 返回兼容 duck-type 对象（有 .retries 属性）
+    return record
 
 
 def check_task_close_conditions(task: dict, bead_adapter) -> list[GateResult]:

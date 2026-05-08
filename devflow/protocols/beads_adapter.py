@@ -204,7 +204,14 @@ class BeadsAdapter:
         return False
 
     def _check_epic_has_field(self, field: str) -> bool:
-        """检查 epic 是否有指定非空字段。"""
+        """检查 epic 是否有指定非空字段。
+
+        beads 使用 acceptance_criteria 作为字段名，devflow 使用 acceptance。
+        同时检查两种命名。
+        """
+        alt_names = {field}
+        if field == "acceptance":
+            alt_names.add("acceptance_criteria")
         if not self._available:
             return False
         code, out, err = self._run_bd(["list", "--type=epic", "--status=open", "--json"])
@@ -214,9 +221,10 @@ class BeadsAdapter:
             data = json.loads(out)
             if isinstance(data, list):
                 for epic in data:
-                    val = epic.get(field, "")
-                    if val and val.strip():
-                        return True
+                    for name in alt_names:
+                        val = epic.get(name, "")
+                        if val and val.strip():
+                            return True
         except (json.JSONDecodeError, TypeError):
             pass
         return False

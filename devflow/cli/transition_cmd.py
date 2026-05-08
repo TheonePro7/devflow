@@ -87,7 +87,6 @@ def run_transition(args: argparse.Namespace):
         can, failed = sm.can_transition(current_id, bead_adapter)
     else:
         can, failed = True, []
-        _ = sm.get_state(bead_adapter)
 
     if not can:
         print(f"\n  ❌ 无法从 {current_id} 转移到 {target_phase}\n")
@@ -125,8 +124,8 @@ def run_transition(args: argparse.Namespace):
     if tip:
         print(tip)
 
-    # 进入 phase-1 时自动启动 ideate
-    if target_phase == "phase-1" and not args.dry_run:
+    # 进入 phase-1 时自动启动 ideate（仅交互式终端）
+    if target_phase == "phase-1" and not args.dry_run and sys.stdin.isatty():
         try:
             from devflow.cli.ideate_cmd import run_ideate
             _ideate_args = argparse.Namespace(

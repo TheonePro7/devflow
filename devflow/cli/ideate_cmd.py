@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -68,7 +67,17 @@ def run_ideate(args: argparse.Namespace):
     """启动 4 阶段需求梳理。"""
     project_path = Path(args.path) if args.path else Path.cwd()
     bead_adapter = BeadsAdapter(project_path)
-    resume_from = args.resume
+
+    # 非交互模式下输出引导，让 agent 或用户通过 --resume 传入答案
+    if not sys.stdin.isatty():
+        print(f"\n{'=' * 56}")
+        print(f"  Phase 1: Ideate — 需求梳理")
+        print(f"  {'=' * 56}")
+        print(f"  当前在非交互模式。")
+        print(f"  请代理或用户填充 ideate 数据后运行:")
+        print(f"    devflow ideate --resume")
+        print(f"  或手动填写 .devflow/ideate.json\n")
+        return
 
     print(f"\n{'=' * 56}")
     print(f"  Phase 1: Ideate — 需求梳理")

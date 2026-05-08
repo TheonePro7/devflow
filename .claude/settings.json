@@ -138,7 +138,33 @@
       "Bash(python -m pytest tests/test_integration.py -v)",
       "Bash(git show *)",
       "Bash(mv .claude/settings.json.tmp .claude/settings.json)",
-      "Bash(python -m pytest tests/test_state_machine.py tests/test_gates.py tests/test_escalation.py -v)"
+      "Bash(python -m pytest tests/test_state_machine.py tests/test_gates.py tests/test_escalation.py -v)",
+      "Bash(gh release *)",
+      "Bash(python -m devflow state)",
+      "PowerShell(devflow state 2>&1)",
+      "PowerShell(devflow doctor 2>&1)",
+      "PowerShell(npx --yes skills run autoresearch:probe 2>&1)",
+      "PowerShell(npx --yes skills --help 2>&1)",
+      "PowerShell(npx --yes skills list -g --json 2>&1)",
+      "PowerShell(npx --yes -p uditgoenka/autoresearch autoresearch:probe --help 2>&1)",
+      "PowerShell(Get-Command npx -ErrorAction SilentlyContinue)",
+      "Bash(pytest tests/ --tb=short --collect-only)",
+      "Bash(Select-String -Pattern \"test_\")",
+      "Bash(python -m pytest tests/ --tb=short -q)",
+      "PowerShell(devflow transition phase-4/start 2>&1)",
+      "PowerShell(devflow task list 2>&1)",
+      "PowerShell(git add devflow/cli/transition_cmd.py devflow/engine/escalation.py devflow/engine/gates.py devflow/engine/state_machine.py devflow/protocols/autoresearch_adapter.py tests/test_escalation.py tests/test_gates.py tests/test_integration.py)",
+      "PowerShell(devflow transition phase-5/start 2>&1)",
+      "PowerShell(git pull --rebase 2>&1)",
+      "PowerShell(git stash)",
+      "PowerShell(git pull --rebase)",
+      "PowerShell(git stash pop 2>&1)",
+      "PowerShell(git push 2>&1)",
+      "PowerShell(git add docs/devflow-engine-design.md docs/DEVELOPER.md docs/CONTEXT.md)",
+      "PowerShell(Set-Location \"F:\\\\AI\\\\memory\"; powershell -File F:\\\\AI\\\\devflow\\\\install.ps1 2>&1)",
+      "Bash(python -m pytest tests/ -v --tb=short)",
+      "Bash(python -m pytest tests/ -v --tb=short -k \"not transition_rollback\")",
+      "Bash(python -m pytest tests/test_integration.py -v --tb=short -k \"rollback\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
@@ -157,7 +183,8 @@
       "F:\\AI\\WekSkill\\.claude",
       "F:\\AI\\cut\\.claude",
       "F:\\AI\\note\\.claude",
-      "f:\\AI"
+      "f:\\AI",
+      "F:\\AI\\devflow"
     ]
   },
   "hooks": {

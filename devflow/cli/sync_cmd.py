@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from devflow.engine.state_machine import StateMachine
 from devflow.protocols.beads_adapter import BeadsAdapter
 from devflow.protocols.gitnexus_adapter import GitNexusAdapter
 from devflow.protocols.autoresearch_adapter import AutoresearchAdapter

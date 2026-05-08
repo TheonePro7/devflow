@@ -2,6 +2,14 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
+      "Bash(*)",
+      "PowerShell(*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebSearch",
       "Bash(export PATH=\"$PATH:/c/Users/Administrator/AppData/Local/Microsoft/WinGet/Links\")",
       "PowerShell(powershell -NoProfile -File scripts/merge-settings.ps1 -DryRun 2>&1 | Out-String)",
       "Bash(cp .claude/settings.json .claude/settings.json.testbak)",

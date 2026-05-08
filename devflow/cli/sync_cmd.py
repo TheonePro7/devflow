@@ -8,6 +8,7 @@ from pathlib import Path
 from devflow.protocols.beads_adapter import BeadsAdapter
 from devflow.protocols.gitnexus_adapter import GitNexusAdapter
 from devflow.protocols.autoresearch_adapter import AutoresearchAdapter
+from devflow.utils import check_superpowers
 
 
 def run_sync(args: argparse.Namespace):
@@ -56,9 +57,9 @@ def run_sync(args: argparse.Namespace):
 
     # 4. superpowers
     print(f"  [4/4] superpowers...")
-    sp_available = _check_superpowers()
+    sp_available, sp_detail = check_superpowers()
     results["superpowers"] = {"available": sp_available}
-    print(f"    {'✅' if sp_available else '⚠️'} {'已安装' if sp_available else '未检测到'}")
+    print(f"    {'✅' if sp_available else '⚠️'} {sp_detail}")
 
     # 仅追加日志，不污染 phase 状态
     summary = (
@@ -72,14 +73,3 @@ def run_sync(args: argparse.Namespace):
     print(f"\n  ✅ 同步完成\n")
 
 
-def _check_superpowers() -> bool:
-    """检查 superpowers 是否可用。"""
-    from shutil import which
-    skills_dir = Path.home() / ".claude" / "skills"
-    if not skills_dir.exists():
-        return False
-    # 检查是否有 superpowers 开头的 skill
-    for d in skills_dir.iterdir():
-        if d.is_dir() and d.name.startswith("superpowers-"):
-            return True
-    return False

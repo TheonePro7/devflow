@@ -5,6 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def check_superpowers() -> tuple[bool, str]:
+    """检查 superpowers skills 是否可用。"""
+    skills_dir = Path.home() / ".claude" / "skills"
+    if not skills_dir.exists():
+        return False, ".claude/skills/ 不存在"
+    count = sum(1 for d in skills_dir.iterdir() if d.is_dir() and d.name.startswith("superpowers-"))
+    if count > 0:
+        return True, f"已安装 {count} 个 skill"
+    return False, "未检测到 superpowers skill"
+
+
 def detect_test_commands(project_path: Path) -> list[str]:
     """自动检测项目使用的测试框架，返回可能的测试命令列表。"""
     checks = [

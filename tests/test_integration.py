@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import json
-import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -17,11 +17,8 @@ from pathlib import Path
 import pytest
 
 
-
-
 def _run_devflow(*args: str) -> str:
     """用子进程运行 devflow 命令并返回 stdout。"""
-    import subprocess
     result = subprocess.run(
         [sys.executable, "-m", "devflow.cli.main", *args],
         capture_output=True,
@@ -147,7 +144,6 @@ class TestIntegration:
 
     def test_transition_rollback_unknown_phase(self):
         """回退到不存在的 phase 应报错。"""
-        import subprocess
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
             # 不需要 init——直接写 state 文件模拟已有项目

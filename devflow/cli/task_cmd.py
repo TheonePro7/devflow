@@ -91,7 +91,7 @@ def _create_task(adapter: BeadsAdapter, args: argparse.Namespace):
         if not full_title:
             print("❌ --title 不能为空")
             sys.exit(1)
-        adapter._run_bd([
+        adapter.run_bd([
             "create", "--type=task",
             f"--title={full_title}",
             f"--description={description}",
@@ -109,7 +109,7 @@ def _create_task(adapter: BeadsAdapter, args: argparse.Namespace):
             sys.exit(1)
 
         full_title = f"[{task_type}] {title}" if task_type != "task" else title
-        adapter._run_bd([
+        adapter.run_bd([
             "create", f"--type={task_type}",
             f"--title={full_title}",
             f"--description={description}",

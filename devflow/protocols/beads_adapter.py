@@ -133,7 +133,8 @@ class BeadsAdapter:
 
     # ========== 运行 bd 命令 ==========
 
-    def _run_bd(self, args: list[str], timeout: int = 15) -> tuple[int, str, str]:
+    def run_bd(self, args: list[str], timeout: int = 15) -> tuple[int, str, str]:
+        """运行 beads CLI 命令。"""
         try:
             result = subprocess.run(
                 [self._bd_cmd] + args,
@@ -148,6 +149,9 @@ class BeadsAdapter:
             return -1, "", "bd not found"
         except Exception as e:
             return -1, "", str(e)
+
+    # 向后兼容
+    _run_bd = run_bd
 
     # ========== Phase / State ==========
 
@@ -339,7 +343,9 @@ class BeadsAdapter:
         try:
             data = json.loads(out)
             if isinstance(data, dict):
-                return BeadsIssue(**data)
+                valid_fields = BeadsIssue.__dataclass_fields__
+                filtered = {k: v for k, v in data.items() if k in valid_fields}
+                return BeadsIssue(**filtered)
         except (json.JSONDecodeError, TypeError):
             pass
         return None

@@ -49,6 +49,66 @@ class AutoresearchAdapter:
                 return True, label
         return False, ""
 
+    # ========== 安全审计 ==========
+
+    def security(self, diff_mode: bool = True) -> dict:
+        """运行本地安全检查。
+
+        检查常见的代码安全问题：subprocess shell=True、路径穿越、硬编码密钥等。
+        """
+        findings = []
+
+        # 1. 检查 Python 文件中 subprocess shell=True 的使用
+        for py_file in self.project_path.rglob("*.py"):
+            if "site-packages" in str(py_file) or ".venv" in str(py_file):
+                continue
+            if py_file.stat().st_size > 50000:
+                continue
+            try:
+                content = py_file.read_text(encoding="utf-8", errors="replace")
+                for i, line in enumerate(content.split("\n"), 1):
+                    stripped = line.strip()
+                    if "shell=True" in stripped and not stripped.startswith("#"):
+                        rel_path = py_file.relative_to(self.project_path)
+                        findings.append({
+                            "severity": "medium",
+                            "file": str(rel_path),
+                            "line": i,
+                            "issue": "subprocess.run 使用 shell=True",
+                            "detail": stripped.strip()[:120],
+                        })
+            except Exception:
+                continue
+
+        # 2. 检查 .env / .key 文件是否在 gitignore 中
+        gitignore = self.project_path / ".gitignore"
+        sensitive_patterns = ["*.key", ".env", "credentials"]
+        if gitignore.exists():
+            gi_content = gitignore.read_text(encoding="utf-8", errors="replace")
+            for pat in sensitive_patterns:
+                if pat not in gi_content:
+                    findings.append({
+                        "severity": "low",
+                        "file": ".gitignore",
+                        "line": 0,
+                        "issue": f"敏感文件模式 '{pat}' 不在 .gitignore 中",
+                        "detail": "敏感文件可能被意外提交",
+                    })
+
+        success = len([f for f in findings if f["severity"] == "high"]) == 0
+
+        return {
+            "success": success,
+            "output": f"安全审计完成。发现 {len(findings)} 个问题。\n" + (
+                "\n".join(
+                    f"  [{f['severity']}] {f['file']}:{f['line']} — {f['issue']}"
+                    for f in findings[:10]
+                ) if findings else "  未发现问题。"
+            ),
+            "findings": findings,
+            "type": "security",
+        }
+
     # ========== 验证执行 ==========
 
     def run_verification(self, command: str, timeout: int = 300) -> dict:

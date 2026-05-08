@@ -21,7 +21,6 @@ STAGES = [
             "  • 技术背景（工程师？设计师？普通用户？）\n"
             "  • 使用频率（每天？每周？偶尔？）"
         ),
-        "key": "target_users",
         "label": "目标用户分析",
     },
     {
@@ -33,7 +32,6 @@ STAGES = [
             "  • 目前用什么方式解决？\n"
             "  • 现有方案有什么痛点？"
         ),
-        "key": "scenario_pain",
         "label": "场景与痛点分析",
     },
     {
@@ -45,7 +43,6 @@ STAGES = [
             "  • 间接竞品（用不同方式解决同一个问题）\n"
             "  • 我们相比有什么差异化优势？"
         ),
-        "key": "alternatives",
         "label": "竞品分析",
     },
     {
@@ -57,7 +54,6 @@ STAGES = [
             "  • 最小可行范围是什么？\n"
             "  • 哪些功能可以后续迭代？"
         ),
-        "key": "success_criteria",
         "label": "成功标准定义",
     },
 ]
@@ -254,7 +250,7 @@ def _create_epic_from_ideate(adapter: BeadsAdapter, data: dict, project_path: Pa
         title_clean = title.replace('"', "'")
         desc_clean = description.replace('"', "'").replace("\n", "\\n")[:500]
         accept_clean = acceptance.replace('"', "'").replace("\n", "\\n")[:300]
-        adapter._run_bd([
+        adapter.run_bd([
             "create", "--type=epic",
             f'--title={title_clean}',
             f'--description={desc_clean}',

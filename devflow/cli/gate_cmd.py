@@ -274,7 +274,7 @@ def _close_task(adapter: BeadsAdapter, task_id: str):
         sys.exit(1)
 
     # 全部条件满足，关闭
-    code, out, err = adapter._run_bd(["close", task_id, "--reason=All gates passed"])
+    code, out, err = adapter.run_bd(["close", task_id, "--reason=All gates passed"])
     if code != 0:
         print(f"  ❌ beads close 失败: {err[:200]}")
         sys.exit(1)

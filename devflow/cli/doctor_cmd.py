@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from devflow.utils import check_superpowers as _check_superpowers
+
 
 def run_doctor(args: argparse.Namespace):
     """运行全套环境诊断。"""
@@ -140,14 +142,6 @@ def _check_autoresearch() -> tuple[bool, str]:
     return False, "未安装（安全审计会跳过）"
 
 
-def _check_superpowers() -> tuple[bool, str]:
-    skills_dir = Path.home() / ".claude" / "skills"
-    if not skills_dir.exists():
-        return False, ".claude/skills/ 不存在"
-    count = sum(1 for d in skills_dir.iterdir() if d.is_dir() and d.name.startswith("superpowers-"))
-    if count > 0:
-        return True, f"已安装 {count} 个 skill"
-    return False, "未检测到 superpowers skill"
 
 
 def _check_git_remote(path: Path) -> tuple[bool, str]:

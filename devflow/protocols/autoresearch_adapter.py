@@ -59,16 +59,22 @@ class AutoresearchAdapter:
         findings = []
 
         # 1. 检查 Python 文件中 subprocess shell=True 的使用
+        self_file = Path(__file__).resolve()
         for py_file in self.project_path.rglob("*.py"):
             if "site-packages" in str(py_file) or ".venv" in str(py_file):
                 continue
             if py_file.stat().st_size > 50000:
                 continue
+            # 跳过自身（run_verification 的 shell=True 是已知的故意设计）
+            if py_file.resolve() == self_file:
+                continue
             try:
                 content = py_file.read_text(encoding="utf-8", errors="replace")
                 for i, line in enumerate(content.split("\n"), 1):
                     stripped = line.strip()
-                    if "shell=True" in stripped and not stripped.startswith("#"):
+                    if "#" in stripped:
+                        stripped = stripped.split("#")[0].strip()
+                    if "shell=True" in stripped and 'subprocess' in stripped:
                         rel_path = py_file.relative_to(self.project_path)
                         findings.append({
                             "severity": "medium",

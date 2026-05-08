@@ -39,6 +39,11 @@ skills-lock.json
 .devflow/state
 .devflow/escalation.json
 
+# Sensitive files (prevent accidental commits)
+.env
+*.key
+credentials
+
 # Abandoned content
 docs/promotion-article.md
 

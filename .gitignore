@@ -39,6 +39,9 @@ skills-lock.json
 .devflow/state
 .devflow/escalation.json
 
+# Abandoned content
+docs/promotion-article.md
+
 # Early research docs (not part of the project)
 research/
 

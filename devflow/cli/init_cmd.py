@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from devflow.protocols.beads_adapter import BeadsAdapter
+from devflow.protocols.gitnexus_adapter import GitNexusAdapter
 
 
 def run_init(args: argparse.Namespace):
@@ -123,54 +124,21 @@ def _ensure_beads(project_path: Path, force: bool) -> bool:
 
 
 def _ensure_gitnexus(project_path: Path, force: bool) -> bool:
-    """确保 gitnexus 可用。"""
-    # 尝试原生
-    try:
-        result = subprocess.run(
-            ["npx", "--yes", "gitnexus", "--help"],
-            capture_output=True, text=True, timeout=30,
-            cwd=project_path,
-            shell=sys.platform == "win32",
-            encoding="utf-8", errors="replace",
-        )
-        if result.returncode == 0:
-            return True
-    except Exception:
-        pass
-
-    # 尝试 Docker
-    try:
-        result = subprocess.run(
-            ["docker", "run", "--rm",
-             "ghcr.io/abhigyanpatwari/gitnexus:latest",
-             "npx", "--yes", "gitnexus", "--help"],
-            capture_output=True, text=True, timeout=60,
-            encoding="utf-8", errors="replace",
-        )
-        if result.returncode == 0:
-            print(f"    ✅ Docker gitnexus 可用")
-            return True
-    except Exception:
-        pass
-
-    print(f"    ⚠️  gitnexus 不可用（原生和 Docker 都不行）")
-    return False
+    """确保 gitnexus 可用。委托给 GitNexusAdapter。"""
+    gitnexus = GitNexusAdapter(project_path)
+    ok, mode = gitnexus.check_available()
+    if not ok:
+        print(f"    ⚠️  gitnexus 不可用（原生和 Docker 都不行）")
+    return ok
 
 
 def _ensure_autoresearch(project_path: Path, force: bool) -> bool:
     """确保 autoresearch 已安装。"""
-    # 检查是否已安装
-    try:
-        result = subprocess.run(
-            ["npx", "--yes", "skills", "run", "autoresearch", "--help"],
-            capture_output=True, text=True, timeout=30,
-            cwd=project_path,
-            encoding="utf-8", errors="replace",
-        )
-        if result.returncode == 0:
-            return True
-    except Exception:
-        pass
+    # 委托给 AutoresearchAdapter 检查已有文件
+    from devflow.protocols.autoresearch_adapter import AutoresearchAdapter
+    auto = AutoresearchAdapter(project_path)
+    if auto.is_available():
+        return True
 
     # 安装
     print(f"    📦 autoresearch 未安装，正在安装...")

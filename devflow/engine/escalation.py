@@ -75,8 +75,12 @@ class EscalationStore:
                     data = json.load(f)
                 if isinstance(data, dict):
                     for k, v in data.items():
-                        self._escalations[k] = EscalationRecord.from_dict(v)
-            except (json.JSONDecodeError, KeyError):
+                        try:
+                            self._escalations[k] = EscalationRecord.from_dict(v)
+                        except KeyError:
+                            # 跳过损坏的单条记录，不清空全部
+                            continue
+            except json.JSONDecodeError:
                 self._escalations = {}
 
     def save(self):
@@ -95,7 +99,7 @@ class EscalationStore:
                 )
             self._dirty = False
         except OSError:
-            pass  # 写失败不阻塞流程
+            print(f"  ⚠️  escalation 持久化失败: {path}")
 
     # ========== 核心操作 ==========
 

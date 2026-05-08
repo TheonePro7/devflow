@@ -1,17 +1,14 @@
-"""autoresearch 适配器 — 质量验证、安全审计、优化循环。
+"""autoresearch 适配器 — 质量验证、安全审计。
 
 autoresearch 本身是一个 SKILL.md 定义（prompt 集合），不是可执行的 CLI 程序。
-因此这个适配器不依赖 npx skills run，而是直接实现 autoresearch 的核心逻辑：
-  - probe: 多角色对抗审视（通过子代理执行）
+因此这个适配器不依赖 npx skills run，而是直接内置核心功能：
   - security: 本地安全审计扫描
-  - fix: 运行验证命令迭代修复
-  - optimize / debug: 委托给用户指定命令
+  - run_verification: 运行测试/验证命令
 """
 
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -51,117 +48,6 @@ class AutoresearchAdapter:
             if p.exists():
                 return True, label
         return False, ""
-
-    # ========== 门禁功能 ==========
-
-    def probe(self, context: Optional[str] = None) -> dict:
-        """对抗人格约束发现。
-
-        通过子代理方式用多个人格审视需求/代码。
-        当前返回提示信息，由上层决定是否启动子代理。
-        """
-        return {
-            "success": True,
-            "output": "probe 需要子代理执行。请在上层用 Agent 加载 autoresearch SKILL.md 后运行 $autoresearch probe",
-            "error": "",
-            "type": "probe",
-        }
-
-    def security(self, diff_mode: bool = True) -> dict:
-        """运行本地安全检查。
-
-        检查常见的代码安全问题：subprocess shell=True、路径穿越、硬编码密钥等。
-        不依赖 autoresearch skill，直接实现检查逻辑。
-        """
-        findings = []
-
-        # 1. 检查 Python 文件中 subprocess shell=True 的使用
-        for py_file in self.project_path.rglob("*.py"):
-            if "site-packages" in str(py_file) or ".venv" in str(py_file):
-                continue
-            if py_file.stat().st_size > 50000:  # 跳过大文件
-                continue
-            try:
-                content = py_file.read_text(encoding="utf-8", errors="replace")
-                for i, line in enumerate(content.split("\n"), 1):
-                    stripped = line.strip()
-                    if "shell=True" in stripped and not stripped.startswith("#"):
-                        rel_path = py_file.relative_to(self.project_path)
-                        findings.append({
-                            "severity": "medium",
-                            "file": str(rel_path),
-                            "line": i,
-                            "issue": "subprocess.run 使用 shell=True",
-                            "detail": stripped.strip()[:120],
-                        })
-            except Exception:
-                continue
-
-        # 2. 检查 .env / .key 文件是否在 gitignore 中
-        gitignore = self.project_path / ".gitignore"
-        sensitive_patterns = ["*.key", ".env", "credentials"]
-        if gitignore.exists():
-            gi_content = gitignore.read_text(encoding="utf-8", errors="replace")
-            for pat in sensitive_patterns:
-                if pat not in gi_content:
-                    findings.append({
-                        "severity": "low",
-                        "file": ".gitignore",
-                        "line": 0,
-                        "issue": f"敏感文件模式 '{pat}' 不在 .gitignore 中",
-                        "detail": "敏感文件可能被意外提交",
-                    })
-
-        success = len([f for f in findings if f["severity"] == "high"]) == 0
-
-        return {
-            "success": success,
-            "output": f"安全审计完成。发现 {len(findings)} 个问题。\n" + (
-                "\n".join(
-                    f"  [{f['severity']}] {f['file']}:{f['line']} — {f['issue']}"
-                    for f in findings[:10]
-                ) if findings else "  未发现问题。"
-            ),
-            "findings": findings,
-            "type": "security",
-        }
-
-    def optimize(self, goal: str, n_iterations: int = 5) -> dict:
-        """运行优化循环。
-
-        提示上层启动自动优化循环。不独立执行。
-        """
-        return {
-            "success": True,
-            "output": (
-                f"优化目标: {goal}\n"
-                f"迭代次数: {n_iterations}\n"
-                "optimize 需要子代理执行。请在上层用 Agent 加载 autoresearch SKILL.md 后运行 $autoresearch。"
-            ),
-            "error": "",
-            "type": "optimize",
-        }
-
-    def fix(self) -> dict:
-        """迭代修复错误直到零错误。
-
-        提示上层启动自动修复循环。
-        """
-        return {
-            "success": True,
-            "output": "fix 需要子代理执行。请在上层用 Agent 加载 autoresearch SKILL.md 后运行 $autoresearch fix。",
-            "error": "",
-            "type": "fix",
-        }
-
-    def debug(self, symptom: str) -> dict:
-        """自主 bug 追查。"""
-        return {
-            "success": True,
-            "output": f"symptom: {symptom}\ndebug 需要子代理执行。",
-            "error": "",
-            "type": "debug",
-        }
 
     # ========== 验证执行 ==========
 

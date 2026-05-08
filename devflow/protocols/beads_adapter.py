@@ -30,6 +30,13 @@ class BeadsIssue:
             return getattr(self, key, default)
         return self.fields.get(key, default)
 
+    @staticmethod
+    def from_dict(data: dict) -> "BeadsIssue":
+        """从字典安全构造 BeadsIssue，过滤掉不支持的字段。"""
+        valid = BeadsIssue.__dataclass_fields__
+        filtered = {k: v for k, v in data.items() if k in valid}
+        return BeadsIssue(**filtered)
+
 
 class BeadsAdapter:
     """beads 工具封装。可降级到本地文件。"""
@@ -314,7 +321,7 @@ class BeadsAdapter:
         try:
             data = json.loads(out)
             if isinstance(data, list):
-                return [BeadsIssue(**item) if isinstance(item, dict) else item for item in data]
+                return [BeadsIssue.from_dict(item) if isinstance(item, dict) else item for item in data]
         except (json.JSONDecodeError, TypeError):
             pass
         return []
@@ -328,7 +335,7 @@ class BeadsAdapter:
             with open(tasks_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, list):
-                return [BeadsIssue(**d) if isinstance(d, dict) else d for d in data
+                return [BeadsIssue.from_dict(d) if isinstance(d, dict) else d for d in data
                         if isinstance(d, dict) and (status == "all" or d.get("status") == status)]
         except (json.JSONDecodeError, IOError):
             pass
@@ -343,9 +350,7 @@ class BeadsAdapter:
         try:
             data = json.loads(out)
             if isinstance(data, dict):
-                valid_fields = BeadsIssue.__dataclass_fields__
-                filtered = {k: v for k, v in data.items() if k in valid_fields}
-                return BeadsIssue(**filtered)
+                return BeadsIssue.from_dict(data)
         except (json.JSONDecodeError, TypeError):
             pass
         return None
@@ -365,7 +370,7 @@ class BeadsAdapter:
         try:
             data = json.loads(out)
             if isinstance(data, list):
-                return [BeadsIssue(**item) if isinstance(item, dict) else item for item in data]
+                return [BeadsIssue.from_dict(item) if isinstance(item, dict) else item for item in data]
         except (json.JSONDecodeError, TypeError):
             pass
         return []
@@ -381,7 +386,7 @@ class BeadsAdapter:
         try:
             data = json.loads(out)
             if isinstance(data, list):
-                return [BeadsIssue(**item) if isinstance(item, dict) else item for item in data]
+                return [BeadsIssue.from_dict(item) if isinstance(item, dict) else item for item in data]
         except (json.JSONDecodeError, TypeError):
             pass
         return []

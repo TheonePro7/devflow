@@ -221,7 +221,8 @@ def _run_security(adapter: BeadsAdapter, task_id: str, project_path: Path):
         print(f"  安全审计可跳过（可选门禁）。")
         if should_escalate(task_id, "security_checked"):
             print(f"\n  {get_escalation_message(task_id, 'security_checked')}\n")
-        sys.exit(1)
+        # 可选门禁，不可用时不退出
+        return
 
     result = auto.security(diff_mode=True)
 

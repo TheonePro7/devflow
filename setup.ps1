@@ -107,7 +107,7 @@ if (-not $ignoreGitnexus) {
     if ($dockerAvailable) {
         Write-Host "[INFO] Docker detected — using gitnexus Docker image..." -ForegroundColor Gray
         $repoPath = (Get-Location).Path
-        docker run --rm -v "${repoPath}:/repo" --user root --entrypoint "sh" ghcr.io/abhigyanpatwari/gitnexus:latest `
+        docker run --rm -v "${repoPath}:/repo" --user root --entrypoint sh ghcr.io/abhigyanpatwari/gitnexus:latest -c `
             "node /app/gitnexus/dist/cli/index.js analyze /repo --skip-git --force" 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             $gitnexusOk = $true

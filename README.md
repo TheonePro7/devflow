@@ -78,22 +78,22 @@ devflow 采用 **5 阶段**架构，从灵感到成品的全生命周期：
                             │
        ┌────────────────────┼────────────────────┐
        ▼                    ▼                    ▼
-   Phase 1             Phase 2             Phase 3-5
-   Ideate              Design              Setup→Develop→Finish
+   Phase 1             Phase 2              Phase 3-5
+   Ideate              Design               Setup→Develop→Finish
 
-   Idea → PRD          PRD → Frontend      Full-stack dev
-
-   Claude 引导        4 阶段 UI 设计      superpowers 管道
-   用户画像           引擎                + autoresearch 门禁
-   + 问题分析          + 自动框架匹配      + git guardrails
-   + to-prd 输出       + Claude Direct
+   Idea → PRD          Tech decisions       Full-stack dev
+                       + ADR
+   Claude 引导        技术选型 + 架构       superpowers 管道
+   用户画像           设计决策             + autoresearch 门禁
+   + 问题分析          (前端 UI 设计         + git guardrails
+   + to-prd 输出       内嵌在 Phase 4)
 ```
 
 ### 设计原则
 
 | 原则 | 说明 |
 |------|------|
-| **从灵感到产品** | Phase 1 帮助非技术用户梳理想法；Phase 2 生成前端设计；Phase 3-5 工程落地 |
+| **从灵感到产品** | Phase 1 梳理想法；Phase 2 技术设计决策；Phase 3-5 工程落地（前端 UI 设计内嵌在 Phase 4） |
 | **不重写 superpowers** | devflow 不做 superpowers 已做的事。Brainstorming、writing-plans、subagent-dev、code-review、finish-branch 全部委托给 superpowers-* |
 | **工具注入** | devflow 的价值在于在管道的定义点注入 beads、gitnexus、grill、screenshot-to-code 等工具 |
 | **硬关卡** | Phase 1 → Phase 2 → Phase 3 顺序执行。Plan-grill 未通过不能进入 writing-plans |
@@ -154,54 +154,81 @@ Stage 4: 约束与成功标准
 - **降低门槛**：不需要写需求文档，用自然语言描述即可
 - **自适应探索**：不会问重复问题，只挖掘信息缺口
 - **结构化输出**：从模糊想法到可执行的完整 PRD
-- **无缝衔接**：PRD 直接喂给 Phase 2 做前端设计，或 Phase 4 做开发
+- **无缝衔接**：PRD 直接喂给 Phase 4 开发管道；含前端需求的 task 自动触发 UI 设计
 
 ---
 
-## 三、Phase 2：前端设计（Design）
+## 三、Phase 2：设计决策（Design）
 
-**面向人群**：需要前端界面但不懂设计或前端开发的用户。
+**面向人群**：所有项目都需经过的技术设计阶段。
 
 ### 发生了什么
 
-Phase 1 生成 PRD 后，**强制进入 Phase 2**。这是一个 4 阶段流程引擎，和 Phase 1 一样有明确定义的阶段、输出物和确认点：
+Phase 1 生成 PRD 后，进入技术设计阶段。**此阶段产出的不是代码，而是设计决策**：
+
+- 技术栈选型（框架、语言、数据库、部署方案）
+- 架构设计（目录结构、模块划分、数据流）
+- 关键设计决策记录（ADR）
+
+所有决策记录到 `beads`（通过 `DECISION_EXISTS` 条件验证）。
+
+### 前端 UI 设计（Phase 4 内嵌）
+
+> 前端 UI 设计不是独立的 Phase，而是 **Phase 4 开发循环的内嵌流程**。
+
+当 `devflow dev brainstorm <task>` 检测到 task 包含前端需求（通过关键词匹配），自动触发 **4 阶段 UI 设计引擎**：
 
 ```
-PRD 完成
+devflow dev brainstorm <task>
   │
-  ├── Stage 1: UI 需求提取 (step=ui-req)
+  ├── 🔍 检测: task 标题/描述含前端关键词?
+  │     ├── ✅ 是 → 自动触发 4 阶段 UI 设计
+  │     └── ⬜ 否 → 直接进入 brainstorming
+  │
+  ├── ═══ UI 设计引擎 (4-stage) ═══
+  │
+  ├── Stage 1: UI 需求提取
   │   ├── 从 PRD 提取页面/界面清单
   │   ├── 提取用户流程与交互路径
-  │   ├── 提取数据展示需求
   │   ├── 自动分类项目类型 (landing/admin/ecommerce/...)
-  │   └── 输出: UI 需求摘要
+  │   └── 输出: docs/ux/<feature>/ui-req.json
   │
-  ├── Stage 2: 架构蓝图 (step=arch-decision)
+  ├── Stage 2: 架构蓝图
   │   ├── 自动选型: 框架 + 设计系统（不询问用户）
-  │   ├── 定义组件树（父子层级）
-  │   ├── 定义状态管理模式
-  │   └── 定义 API 集成点
+  │   ├── 定义组件树、状态管理、API 集成点
+  │   └── 输出: docs/ux/<feature>/architecture.json
   │
-  ├── Stage 3: 前端代码生成 (step=scaffold)
-  │   ├── Claude Direct（默认，1-5 页）— 零安装
-  │   ├── OpenUI（6-15 页，按需安装）
-  │   ├── bolt.diy（16+ 页，按需安装）
-  │   ├── screenshot-to-code（有设计稿时）
-  │   └── 应用设计令牌（颜色、间距、排版）
+  ├── Stage 3: 前端代码方案
+  │   ├── Claude Direct（默认，零安装）— Agent 生成完整前端
+  │   └── 输出: docs/ux/<feature>/scaffold.json
   │
-  └── Stage 4: 设计文档化 (step=ux-docs → design-done)
-      ├── 保存到 docs/ux/<feature>/
-      ├── 创建 beads 前端开发任务
-      ├── 更新 prd-context.json
-      └── 移交 Phase 4 开发管道
+  └── Stage 4: 设计文档化
+      ├── 汇总设计决策到 docs/ux/<feature>/decisions.json
+      └── 标记 design-done
+
+  └── 进入 superpowers-brainstorming（携带 UI 设计产物）
 ```
 
-### 核心价值
+### 前端设计原则
 
 - **自动决策**：框架和设计系统自动匹配，用户不需要懂前端技术
+- **按需触发**：纯后端 task 跳过 UI 设计，不阻塞流程
 - **Claude Direct 默认**：80% 的项目零依赖，无需安装任何工具
-- **可升级**：项目复杂时，可以无缝切换到 OpenUI/bolt.diy/screenshot-to-code
-- **设计决策持久化**：所有选择记录在 docs/ux/，后续开发有据可查
+- **可升级**：项目复杂时，可手动切换到 OpenUI/bolt.diy/screenshot-to-code
+- **设计持久化**：所有选择记录在 docs/ux/，后续开发有据可查
+- **手动控制**：随时运行 `devflow ui design <name>` 手动触发全流程
+
+### 命令速查
+
+| 命令 | 说明 |
+|------|------|
+| `devflow ui design <name>` | 完整 4 阶段 UI 设计 |
+| `devflow ui detect <task_id>` | 检测 task 前端需求 |
+| `devflow ui status [name]` | 查看 UI 设计状态 |
+| `devflow ui analyze <name>` | 仅 Stage 1: UI 需求提取 |
+| `devflow ui architect <name>` | 仅 Stage 2: 架构蓝图 |
+| `devflow ui scaffold <name>` | 仅 Stage 3: 前端代码方案 |
+| `devflow ui docs <name>` | 仅 Stage 4: 设计文档化 |
 
 ---
 

@@ -117,3 +117,22 @@ def can_close_task(task: dict, bead_adapter) -> tuple[bool, list[GateResult]]:
     results = check_task_close_conditions(task, bead_adapter)
     failed = get_failed_conditions(results)
     return len(failed) == 0, results
+
+
+def get_task_conditions(bead_adapter, task_id: str) -> dict[str, bool]:
+    """从 beads 中读取 task 的真实条件状态。
+
+    Args:
+        bead_adapter: beads 适配器实例
+        task_id: task ID
+
+    Returns:
+        dict[str, bool]: 每个条件字段的实际值
+    """
+    task = bead_adapter.get_task(task_id)
+    if not task:
+        return {}
+    result = {}
+    for condition in TASK_CLOSE_CONDITIONS:
+        result[condition.field] = task.get(condition.field, False) if hasattr(task, "get") else False
+    return result

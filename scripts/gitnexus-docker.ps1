@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 $Image = "ghcr.io/abhigyanpatwari/gitnexus:latest"
 $Repo = (Get-Location).Path
 $Cli = "node /app/gitnexus/dist/cli/index.js"
-$DockerBase = "docker run --rm -v ""${Repo}:/repo"" --user root --entrypoint sh $Image"
+$DockerBase = "docker run --rm -v ""${Repo}:/repo"" --user root --entrypoint sh $Image -c"
 
 # Check Docker is available
 try {

@@ -25,12 +25,16 @@ HELP_TEXT = """
 │    devflow doctor            一键诊断环境                    │
 │                                                              │
 │  Phase 4  Develop（开发循环）                                │
-│    devflow dev start <id>    开始开发一个 task               │
-│    devflow dev finish <id>   完成 task（验证+关闭）          │
-│    devflow dev next          查看下一个 task                 │
-│    devflow dev status        开发面板概览                    │
-│    devflow task list         查看所有 task                   │
-│    devflow gate check <id>   检查关闭条件                   │
+│    devflow dev brainstorm <id>  启动设计探索（含前端 UI 检测）│
+│    devflow dev start <id>       开始开发一个 task             │
+│    devflow dev finish <id>      完成 task（验证+关闭）        │
+│    devflow dev next             查看下一个 task               │
+│    devflow dev status           开发面板概览                  │
+│    devflow ui design <name>     手动触发 UI 4 阶段设计流程   │
+│    devflow ui detect <id>       检测 task 前端需求           │
+│    devflow ui status [name]     查看 UI 设计状态             │
+│    devflow task list            查看所有 task                 │
+│    devflow gate check <id>      检查关闭条件                  │
 │                                                              │
 │  Phase 5  Finish（收尾）                                     │
 │    devflow state             查看当前阶段和状态              │

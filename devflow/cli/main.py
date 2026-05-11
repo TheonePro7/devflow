@@ -19,6 +19,7 @@ from devflow.cli.doctor_cmd import run_doctor
 from devflow.cli.help_cmd import run_help
 from devflow.cli.prd_cmd import run_prd
 from devflow.cli.bootstrap_cmd import run_bootstrap
+from devflow.cli.ui_cmd import run_ui
 
 
 def _setup_encoding():
@@ -115,6 +116,15 @@ def main(argv: list[str] | None = None):
                        help="操作: brainstorm=<task-id> 启动设计探索, execute=<plan-file> 执行管道, start=<task-id> 开始, finish=<task-id> 完成, next 下一个, status 概览")
     p_dev.add_argument("task_id", nargs="?", help="task ID 或 plan/design 文件路径（brainstorm/start/finish 时需要）")
     p_dev.set_defaults(func=run_dev)
+
+    # ui (Phase 4 内嵌 UI 设计)
+    p_ui = subparsers.add_parser("ui", help="UI 设计工具（Phase 4 前端设计流程）")
+    p_ui.add_argument("--path", help="项目路径（默认当前目录）")
+    p_ui.add_argument("action", choices=["analyze", "architect", "scaffold", "docs", "design", "status", "detect"],
+                       help="操作: analyze/ui-req, architect, scaffold, docs, design=完整流程, status, detect=检测 task 前端需求")
+    p_ui.add_argument("feature", nargs="?", help="功能名称 或 task_id（detect 时）")
+    p_ui.add_argument("--description", help="功能描述（design 时可选提供）")
+    p_ui.set_defaults(func=run_ui)
 
     # task
     p_task = subparsers.add_parser("task", help="任务管理")

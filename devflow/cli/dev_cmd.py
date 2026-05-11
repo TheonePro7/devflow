@@ -187,17 +187,70 @@ def _brainstorm(adapter: BeadsAdapter, task_id: str, project_path: Path):
     else:
         print(f"  ⚠️  gitnexus: 不可用")
 
-    # 4. 输出 Skill 调用指令
+    # 4. 检测前端需求 → 自动注入 UI 设计流程
+    from devflow.protocols.ui_design_adapter import UIDesignAdapter
+    task_title = task.title if task else task_id or ""
+    task_desc = task.description if task else ""
+    needs_ui = UIDesignAdapter.has_frontend_needs(task_title, task_desc)
+
+    if needs_ui:
+        ui = UIDesignAdapter(project_path)
+        print(f"\n  🎨 检测到前端需求，自动触发 UI 设计流程\n")
+
+        if not ui.has_existing_design(feature_name):
+            # 执行完整 4 阶段 UI 设计（静默模式，只输出摘要）
+            prd_text = ""
+            prd_dir = project_path / "docs" / "prd"
+            if prd_dir.exists():
+                prd_files = sorted(prd_dir.glob("*.md"), reverse=True)
+                if prd_files:
+                    try:
+                        prd_text = prd_files[0].read_text(encoding="utf-8")
+                    except IOError:
+                        pass
+
+            reqs = ui.extract_ui_requirements(feature_name, prd_text)
+            arch = ui.generate_architecture(feature_name, reqs.get("project_type", "landing"))
+            plan = ui.plan_scaffold(feature_name, arch)
+            result = ui.document_design(feature_name, reqs, arch, plan)
+
+            if result.status == "completed":
+                print(f"     ✅ Stage 1/4: UI 需求提取")
+                print(f"     ✅ Stage 2/4: 架构蓝图 — {arch['framework']} + {arch['ui_lib']}")
+                print(f"     ✅ Stage 3/4: 前端代码方案 — Claude Direct")
+                print(f"     ✅ Stage 4/4: 设计文档化 — {result.docs_path}")
+                print(f"     📄 设计决策: {len(result.decisions)} 条")
+        else:
+            print(f"     📂 已有 UI 设计记录 (docs/ux/{feature_name}/)")
+
+    # 5. 查找已有设计文档 → 自动计算下一步
+    existing_specs = sorted((project_path / "docs/superpowers/specs").glob("*.md"), reverse=True)
+    design_doc_path = None
+    for spec in existing_specs:
+        content = spec.read_text(encoding="utf-8", errors="replace")
+        if feature_name.lower() in content.lower() or (task_id and task_id.lower() in content.lower()):
+            design_doc_path = spec
+            break
+
+    # 6. 输出 Skill 调用指令（带智能默认路径）
     print(f"\n  {'─'*50}")
-    print(f"  下一步：调用 superpowers-brainstorming 技能\n")
-    print(f"  1. 在对话中输入:")
-    print(f"     /brainstorming")
-    print(f"     目标: {feature_name}")
-    if epic_id:
-        print(f"     beads epic: {epic_id}")
-    print(f"\n  2. HARD GATE: 设计必须经你批准才能写代码")
-    print(f"\n  3. 设计批准后运行:")
-    print(f"     devflow dev execute docs/superpowers/specs/<your-design>.md")
+    if design_doc_path:
+        print(f"  📄 检测到已有设计文档: {design_doc_path.relative_to(project_path)}")
+        print(f"  如需重新设计，请运行 /brainstorming 后告知变更\n")
+        print(f"  ✅ 可直接进入实施阶段:\n")
+        print(f"     devflow dev execute {design_doc_path.relative_to(project_path)}\n")
+    else:
+        print(f"  下一步：调用 superpowers-brainstorming 技能\n")
+        print(f"  1. 在对话中输入:")
+        print(f"     /brainstorming")
+        print(f"     目标: {feature_name}")
+        if epic_id:
+            print(f"     beads epic: {epic_id}")
+        if needs_ui:
+            print(f"     UI 设计产物: docs/ux/{feature_name}/")
+        print(f"\n  2. HARD GATE: 设计必须经你批准才能写代码")
+        print(f"\n  3. 设计批准后运行:")
+        print(f"     devflow dev execute docs/superpowers/specs/<your-design>.md")
     print(f"  {'─'*50}\n")
 
 
@@ -214,7 +267,7 @@ def _execute(adapter: BeadsAdapter, plan_file: Optional[str], project_path: Path
       4. 全部完成 → superpowers-finishing-a-development-branch
 
     Args:
-        plan_file: 设计文档路径（可由 brainstorm 生成，或用户提供）
+        plan_file: 设计文档路径（可用 brainstorm 生成，或 auto-discover）
     """
     print(f"\n  {'='*50}")
     print(f"  ⚡ Phase 4 → superpowers 执行管道")
@@ -222,14 +275,27 @@ def _execute(adapter: BeadsAdapter, plan_file: Optional[str], project_path: Path
 
     _ensure_superpowers_in_settings()
 
-    # 1. 定位设计文档
+    # 1. 定位设计文档：优先指定路径，否则 auto-discover 最新 spec
     spec_path = None
     if plan_file:
         spec_path = Path(plan_file)
         if not spec_path.is_absolute():
             spec_path = project_path / spec_path
         if not spec_path.exists():
-            print(f"  ⚠️  找不到设计文档: {spec_path}")
+            print(f"  ⚠️  找不到指定设计文档: {spec_path}")
+            spec_path = None
+
+    if not spec_path:
+        specs_dir = project_path / "docs" / "superpowers" / "specs"
+        if specs_dir.exists():
+            specs = sorted(specs_dir.glob("*.md"), reverse=True)
+            if specs:
+                spec_path = specs[0]
+                print(f"  📄 自动发现设计文档: {spec_path.relative_to(project_path)}")
+            else:
+                print(f"  📄 docs/superpowers/specs/ 为空，需要先 brainstorm")
+        else:
+            print(f"  📄 docs/superpowers/specs/ 不存在，需要先 brainstorm")
 
     # 2. 检查 gitnexus
     from devflow.protocols.gitnexus_adapter import GitNexusAdapter
@@ -247,36 +313,27 @@ def _execute(adapter: BeadsAdapter, plan_file: Optional[str], project_path: Path
     else:
         print(f"  ⚠️  未检测到测试框架（验证会跳过）")
 
-    # 4. 输出执行指令
+    # 4. 输出执行指令（紧凑版）
     print(f"\n  {'─'*50}")
     print(f"  执行管道（依次调用 3 个 superpowers 技能）\n")
 
-    if spec_path and spec_path.exists():
-        print(f"  设计文档: {spec_path}")
-        print(f"\n  第 1 步 - 生成实施计划:")
-        print(f"     /writing-plans")
-        print(f"     设计文档: {spec_path}")
+    rel = spec_path.relative_to(project_path) if spec_path and spec_path.exists() else None
+    if rel:
+        print(f"  设计文档: {rel}")
+        print(f"\n  ├─ 1/3  /writing-plans")
+        print(f"  │    设计文档: {rel}")
     else:
-        print(f"  第 1 步 - 设计探索（如未完成）:")
-        print(f"     /brainstorming")
-        print(f"\n  第 1 步备选 - 直接生成实施计划（已有设计）:")
-        print(f"     /writing-plans")
-        print(f"     设计文档: <your-design-doc-path>")
+        print(f"  ├─ 1/3  /brainstorming   (先完成设计)")
+        print(f"  │     或 /writing-plans   (已有设计文档)")
 
-    print(f"\n  第 2 步 - 子代理驱动开发:")
-    print(f"     /subagent-driven-development")
-    print(f"     每个 task 完成后自动执行:")
-    print(f"       devflow gate run-impact-analysis <task-id>")
-    print(f"       devflow gate run-verification <task-id>")
-
-    print(f"\n  第 3 步 - 完成分支:")
-    print(f"     /finishing-a-development-branch")
-    print(f"     git push 前运行:")
-    print(f"       devflow gate run-security <task-id>")
-
-    print(f"\n  📌 完整流程总结:")
-    print(f"     /brainstorming → /writing-plans → /subagent-driven-development → /finishing-a-development-branch")
-    print(f"     └─ 每步中间可运行 devflow gate * 检查门禁\n")
+    print(f"  ├─ 2/3  /subagent-driven-development")
+    print(f"  │    在每步自动执行:")
+    print(f"  │      devflow gate run-impact-analysis <task-id>")
+    print(f"  │      devflow gate run-verification <task-id>")
+    print(f"  └─ 3/3  /finishing-a-development-branch")
+    print(f"        执行前运行:")
+    print(f"          devflow gate run-security <task-id>")
+    print(f"  {'─'*50}\n")
     print(f"  {'─'*50}\n")
 
 
@@ -289,7 +346,7 @@ def _finish_task(adapter: BeadsAdapter, task_id: str, project_path: Path):
         print(f"  ❌ task {task_id} 未找到")
         sys.exit(1)
 
-    # 先运行影响分析（必须）
+    # 运行影响分析
     print(f"  🔍 运行影响分析...")
     from devflow.protocols.gitnexus_adapter import GitNexusAdapter
     gitnexus = GitNexusAdapter(project_path)
@@ -312,21 +369,25 @@ def _finish_task(adapter: BeadsAdapter, task_id: str, project_path: Path):
                 adapter.update_task_field(task_id, "verification_evidence", True)
                 print(f"  ✅ verification_evidence = true\n")
 
-    # 尝试 gate close
-    from devflow.engine.gates import can_close_task
+    # 从 beads 读取真实条件状态，不再硬编码
+    from devflow.engine.gates import get_task_conditions, can_close_task
+    conditions = get_task_conditions(adapter, task_id)
     task_dict = {
-        "gitnexus_impact_checked": True,
-        "verification_evidence": True,
-        "design_approved": True,
-        "security_checked": False,
+        "design_approved": conditions.get("design_approved", False),
+        "gitnexus_impact_checked": conditions.get("gitnexus_impact_checked", False),
+        "verification_evidence": conditions.get("verification_evidence", False),
+        "security_checked": conditions.get("security_checked", False),
     }
-    can_close, _ = can_close_task(task_dict, adapter)
+    can_close, results = can_close_task(task_dict, adapter)
     if can_close:
         print(f"  ✅ 所有条件满足，task 可以关闭\n")
         print(f"  运行: devflow gate close {task_id}\n")
     else:
-        print(f"  ⚠️  部分条件未满足，手动检查:\n")
-        print(f"    devflow gate check {task_id}\n")
+        print(f"  ⚠️  部分条件未满足:\n")
+        for cond_name, passed in results.items():
+            icon = "✅" if passed else "❌"
+            print(f"     {icon} {cond_name}")
+        print(f"\n  运行: devflow gate check {task_id}\n")
 
 
 def _next_task(adapter: BeadsAdapter, project_path: Path):
@@ -358,6 +419,28 @@ def _dev_status(adapter: BeadsAdapter, project_path: Path):
     ready = adapter.get_tasks(status="ready")
     in_progress = adapter.get_tasks(status="in_progress")
     open_tasks = adapter.get_tasks(status="open")
+
+    # 读取 devflow state 判断当前 pipeline 步骤
+    state_file = project_path / ".devflow" / "state"
+    if state_file.exists():
+        try:
+            import json
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            phase = state.get("phase", "")
+            step = state.get("step", "")
+            if phase == "4":
+                step_labels = {
+                    "brainstorm": "🧠 brainstorm（设计探索）",
+                    "writing-plans": "📝 writing-plans（计划生成）",
+                    "subagent-dev": "⚡ subagent-dev（开发实施）",
+                    "code-review": "👀 code-review（代码审查）",
+                    "security": "🔒 security（安全审计）",
+                    "finish": "🏁 finish（收尾）",
+                }
+                label = step_labels.get(step, step)
+                print(f"  📍 当前步骤: {label}")
+        except (json.JSONDecodeError, IOError):
+            pass
 
     print(f"\n  📊 开发状态\n")
     print(f"  ▶ 进行中: {len(in_progress)}")

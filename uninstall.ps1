@@ -45,6 +45,7 @@ param(
 $ErrorActionPreference = "Stop"
 $homeDir = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
 $devflowSkillDir = Join-Path $homeDir ".claude\skills\devflow"
+# Note: devflow CLI now installs via pip. This directory may not exist.
 
 # If --all, enable all flags except Beads/GitNexus (those need --force too)
 if ($All) {

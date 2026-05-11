@@ -1,103 +1,101 @@
 <#
 .SYNOPSIS
-    Initialize devflow workflow in a project (Phase 3 Setup).
+    Initialize devflow scaffold in the current project directory.
 .DESCRIPTION
-    Auto-installs tools, initializes beads + gitnexus, seeds docs, registers guardrails.
-    Supports merge mode (default) — detects and merges existing configs.
+    Generates the devflow project scaffold directly — no external
+    repo copy needed. Creates:
+      - .devflow/          state tracking
+      - .beads/            issue tracking (via bd init)
+      - .gitnexus/         code graph index (via Docker or native)
+      - .claude/settings.json  hooks registration
+      - .claude/hooks/     guardrails + session hooks
+      - docs/              seed documentation (CONTEXT.md, ADR, TDD)
+      - docs/prd/          PRD output directory
+      - docs/ux/           UI design output directory
+      - docs/superpowers/specs/  design specs directory
+      - .gitignore         sensible defaults
+
+    Should be run from the project root directory.
 .USAGE
     .\setup.ps1             # Merge mode (idempotent)
-    .\setup.ps1 --fresh     # Fresh install (overwrite)
+    .\setup.ps1 --fresh     # Fresh install (overwrite existing)
     .\setup.ps1 --skip-autoresearch
-    .\setup.ps1 -WithDesigner      # Also install optional UI generators
+.PARAMETER Fresh
+    Overwrite existing configs instead of merging.
+.PARAMETER SkipAutoresearch
+    Skip autoresearch installation.
 #>
 
 param(
     [switch]$Fresh,
-    [switch]$SkipAutoresearch,
-    [switch]$WithDesigner
+    [switch]$SkipAutoresearch
 )
 
 $ErrorActionPreference = "Stop"
 $mergeMode = -not $Fresh.IsPresent
 
-Write-Host "=== devflow setup (Phase 3) ===" -ForegroundColor Cyan
+Write-Host "=== devflow setup (project scaffold) ===" -ForegroundColor Cyan
 if ($mergeMode) {
-    Write-Host "  mode: merge (idempotent) — existing configs will be preserved and extended." -ForegroundColor Gray
+    Write-Host "  mode: merge — existing configs will be preserved." -ForegroundColor Gray
 } else {
-    Write-Host "  mode: fresh — existing configs may be overwritten." -ForegroundColor Yellow
+    Write-Host "  mode: fresh — existing configs will be overwritten." -ForegroundColor Yellow
 }
 Write-Host ""
 
-# ---- Step 1: Check & install prerequisites ----
-$missing = @()
-
-if (-not (Get-Command "bd" -ErrorAction SilentlyContinue)) {
-    Write-Host "[INFO] beads (bd) not found - auto-installing..." -ForegroundColor Yellow
-    try {
-        go install github.com/gastownhall/beads/cmd/bd@latest 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
-        $env:Path = [Environment]::GetEnvironmentVariable("Path", "User") + ";" + [Environment]::GetEnvironmentVariable("Path", "Machine")
-        if (-not (Get-Command "bd" -ErrorAction SilentlyContinue)) {
-            $missing += "beads (bd) - installed but not in PATH. Add Go bin to PATH or run: go install github.com/gastownhall/beads/cmd/bd@latest"
-        }
-    } catch {
-        $missing += "beads (bd) - install failed: $($_.Exception.Message). Manual: go install github.com/gastownhall/beads/cmd/bd@latest"
-    }
+# ---- Step 1: Create .devflow/ state directory ----
+Write-Host "--- .devflow/ state ---" -ForegroundColor Yellow
+$devflowDir = ".devflow"
+if (-not (Test-Path $devflowDir) -or -not $mergeMode) {
+    $null = New-Item -ItemType Directory -Path $devflowDir -Force
+    $initialState = @{
+        phase = 1
+        step = ""
+        feature = ""
+        prd = ""
+        blocker = ""
+        gate_probe = "pending"
+        gate_scenario = "pending"
+        gate_fix = "pending"
+        gate_security = "pending"
+        updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+    } | ConvertTo-Json -Compress
+    $initialState | Out-File (Join-Path $devflowDir "state") -Encoding utf8
+    Write-Host "[PASS] .devflow/state initialized" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] .devflow/state already exists" -ForegroundColor Yellow
 }
-
-if (-not (Get-Command "gitnexus" -ErrorAction SilentlyContinue)) {
-    Write-Host "[INFO] gitnexus not found - auto-installing..." -ForegroundColor Yellow
-    try {
-        npm install -g gitnexus 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
-        if (-not (Get-Command "gitnexus" -ErrorAction SilentlyContinue)) {
-            $missing += "gitnexus - npm install succeeded but command not found. Try: npx gitnexus"
-        }
-    } catch {
-        $missing += "gitnexus - install failed: $($_.Exception.Message). Manual: npm install -g gitnexus"
-    }
-}
-
-if ($missing.Count -gt 0) {
-    Write-Host "[FAIL] Some tools could not be auto-installed:" -ForegroundColor Red
-    $missing | ForEach-Object { Write-Host "       $_" }
-    exit 1
-}
-Write-Host "[PASS] Prerequisites: beads + gitnexus" -ForegroundColor Green
-
-$gitnexusOk = $false
 
 # ---- Step 2: Init beads ----
 Write-Host ""
 Write-Host "--- beads init ---" -ForegroundColor Yellow
+$beadsOk = $false
 if (Test-Path ".beads") {
-    Write-Host "[SKIP] .beads/ already exists - running bd doctor to verify..." -ForegroundColor Yellow
-    $oldEAP = $ErrorActionPreference; $ErrorActionPreference = "Continue"; bd doctor 2>&1 | Out-Null; $ErrorActionPreference = $oldEAP
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[PASS] beads OK (bd doctor passed)" -ForegroundColor Green
+    if ($mergeMode) {
+        Write-Host "[SKIP] .beads/ already exists" -ForegroundColor Yellow
+        $beadsOk = $true
     } else {
-        Write-Host "[WARN] beads issues found - run 'bd doctor' manually" -ForegroundColor Yellow
+        Write-Host "[FRESH] re-initializing beads..." -ForegroundColor Yellow
+        bd init --force 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { $beadsOk = $true }
     }
 } else {
     bd init 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[PASS] beads initialized" -ForegroundColor Green
+        $beadsOk = $true
     } else {
-        Write-Host "[WARN] beads init failed" -ForegroundColor Yellow
+        Write-Host "[WARN] beads init failed — run 'bd init' manually" -ForegroundColor Yellow
     }
 }
 
 # ---- Step 3: GitNexus analyze ----
 Write-Host ""
 Write-Host "--- gitnexus analyze ---" -ForegroundColor Yellow
-$ignoreGitnexus = $false
-if (Test-Path ".gitnexus") {
-    Write-Host "[SKIP] .gitnexus/ already exists - skipping analyze (use --fresh to rebuild)" -ForegroundColor Yellow
+$gitnexusOk = $false
+if (Test-Path ".gitnexus" -and $mergeMode) {
+    Write-Host "[SKIP] .gitnexus/ already exists" -ForegroundColor Yellow
     $gitnexusOk = $true
-    $ignoreGitnexus = $true
-}
-if (-not $ignoreGitnexus) {
-    # Try Docker-based gitnexus first (bypasses Windows tree-sitter SIGSEGV)
+} else {
     $dockerAvailable = $false
     try {
         $null = docker ps 2>&1 | Out-Null
@@ -116,268 +114,320 @@ if (-not $ignoreGitnexus) {
             Write-Host "[WARN] gitnexus Docker analyze failed" -ForegroundColor Yellow
         }
     } else {
-        Write-Host ""
-        Write-Host "[INFO] Docker Desktop not detected." -ForegroundColor Yellow
-        Write-Host "       gitnexus (code knowledge graph) requires Docker on Windows." -ForegroundColor Gray
+        Write-Host "[INFO] Docker Desktop not detected — gitnexus requires Docker on Windows." -ForegroundColor Yellow
         Write-Host "       Install from: https://docs.docker.com/desktop/setup/install/windows-install/" -ForegroundColor Gray
-        Write-Host "       After install, re-run setup or run the helper directly:" -ForegroundColor Gray
-        Write-Host "       .\scripts\gitnexus-docker.ps1 analyze --force" -ForegroundColor Gray
-        Write-Host "       Skipping gitnexus for now — this is NON-FATAL." -ForegroundColor Gray
+        Write-Host "       After install, re-run setup (gitnexus is NON-FATAL)." -ForegroundColor Gray
     }
-
-    # Native fallback removed — it always SIGSEGVs on Windows (Node 22 / tree-sitter).
-    # Docker is the only reliable path for gitnexus on this platform.
 }
 
-# ---- Step 4: Settings.json merge ----
+# ---- Step 4: Create .claude directory ----
+Write-Host ""
+Write-Host "--- .claude/ structure ---" -ForegroundColor Yellow
+$claudeDir = ".claude"
+if (-not (Test-Path $claudeDir)) {
+    $null = New-Item -ItemType Directory -Path $claudeDir -Force
+}
+$hooksDir = ".claude/hooks"
+if (-not (Test-Path $hooksDir)) {
+    $null = New-Item -ItemType Directory -Path $hooksDir -Force
+}
+Write-Host "[PASS] .claude/ + hooks/ created" -ForegroundColor Green
+
+# ---- Step 5: settings.json ----
 Write-Host ""
 Write-Host "--- settings.json ---" -ForegroundColor Yellow
-if ($mergeMode -and (Test-Path ".claude/settings.json")) {
-    & "$PSScriptRoot\scripts\merge-settings.ps1"
-} elseif ($mergeMode) {
-    & "$PSScriptRoot\scripts\merge-settings.ps1"
-} else {
-    # Fresh mode - just write defaults
-    & "$PSScriptRoot\scripts\merge-settings.ps1"
+$settingsPath = ".claude/settings.json"
+$existingSettings = $null
+if (Test-Path $settingsPath) {
+    if ($mergeMode) {
+        try {
+            $existingSettings = Get-Content $settingsPath -Raw -Encoding utf8 | ConvertFrom-Json
+            Write-Host "[SKIP] settings.json exists (merge mode — patching if needed)" -ForegroundColor Yellow
+        } catch {
+            Write-Host "[WARN] settings.json exists but is invalid JSON — will overwrite" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[FRESH] overwriting settings.json" -ForegroundColor Yellow
+    }
 }
-Write-Host "[PASS] settings.json configured" -ForegroundColor Green
 
-# ---- Step 5: Guardrails hooks ----
+# Build new settings scaffold
+$settings = @{
+    permissions = @{
+        allow = @(
+            "Bash(*)",
+            "PowerShell(*)",
+            "Read",
+            "Edit",
+            "Write",
+            "Glob",
+            "Grep",
+            "Bash(devflow *)",
+            "Bash(python -m devflow *)",
+            "PowerShell(devflow *)"
+        )
+    }
+    hooks = @{
+        PreToolUse = @(
+            @{
+                matcher = "Bash"
+                hooks = @(
+                    @{
+                        type = "command"
+                        command = "powershell -NoProfile -File .claude/hooks/guardrails-git.ps1"
+                        shell = "powershell"
+                        timeout = 5
+                        statusMessage = "devflow: checking git safety..."
+                    }
+                )
+            }
+        )
+        SessionStart = @(
+            @{
+                matcher = ""
+                hooks = @(
+                    @{
+                        type = "command"
+                        command = "powershell -NoProfile -File .claude/hooks/session-start.ps1"
+                    }
+                )
+            }
+        )
+    }
+}
+
+if ($existingSettings -and $mergeMode) {
+    # Merge: keep existing permissions, add devflow hooks if missing
+    $existingSettings | ConvertTo-Json -Depth 10 | Out-File $settingsPath -Encoding utf8
+    Write-Host "[SKIP] settings.json unchanged (use --fresh to overwrite)" -ForegroundColor Yellow
+} else {
+    $settings | ConvertTo-Json -Depth 10 | Out-File $settingsPath -Encoding utf8
+    Write-Host "[PASS] settings.json created" -ForegroundColor Green
+}
+
+# ---- Step 6: Guardrails hooks ----
 Write-Host ""
 Write-Host "--- guardrails hooks ---" -ForegroundColor Yellow
-$hookDir = ".claude/hooks"
-if (-not (Test-Path $hookDir)) {
-    New-Item -ItemType Directory -Path $hookDir -Force | Out-Null
-}
 
-$guardrailsPs1 = Join-Path $hookDir "guardrails-git.ps1"
-$devflowGuardrailsPs1 = Join-Path $PSScriptRoot ".claude/hooks/guardrails-git.ps1"
-
+# guardrails-git.ps1
+$guardrailsPs1 = ".claude/hooks/guardrails-git.ps1"
 if (-not (Test-Path $guardrailsPs1) -or -not $mergeMode) {
-    if (Test-Path $devflowGuardrailsPs1) {
-        Copy-Item $devflowGuardrailsPs1 $guardrailsPs1 -Force
-        Write-Host "[PASS] guardrails-git.ps1 installed" -ForegroundColor Green
-    } else {
-        Write-Host "[WARN] guardrails-git.ps1 not found in devflow" -ForegroundColor Yellow
-    }
-} else {
-    # Existing guardrails found - merge patterns
-    if (Test-Path ".\scripts\merge-guardrails.ps1") {
-        & "$PSScriptRoot\scripts\merge-guardrails.ps1"
-    } else {
-        Write-Host "[SKIP] merge-guardrails.ps1 not found" -ForegroundColor Yellow
+@"
+# guardrails-git.ps1
+# PreToolUse hook for Bash — blocks dangerous git commands.
+`$inputJson = [Console]::In.ReadToEnd()
+if (-not `$inputJson) { return }
+try { `$payload = `$inputJson | ConvertFrom-Json } catch { return }
+`$command = `$payload.tool_input.command
+if (-not `$command) { return }
+
+`$dangerous = @(
+    'git push --force', 'git push -f', 'git push origin +',
+    'git reset --hard', 'git checkout .', 'git checkout --',
+    'git restore .', 'git restore --staged .',
+    'git clean -f', 'git clean -fd',
+    'git branch -D', 'git rebase -i HEAD',
+    'git --no-verify', 'git commit --no-verify'
+)
+foreach (`$pattern in `$dangerous) {
+    if (`$command -match [regex]::Escape(`$pattern)) {
+        @{ action = "reject"; message = "devflow guardrails: blocked dangerous git command: `$pattern" } | ConvertTo-Json -Compress
+        return
     }
 }
+"@ | Out-File $guardrailsPs1 -Encoding utf8
+    Write-Host "[PASS] guardrails-git.ps1 installed" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] guardrails-git.ps1 already exists" -ForegroundColor Yellow
+}
 
-$guardrailsSh = Join-Path $hookDir "guardrails-git.sh"
-$devflowGuardrailsSh = Join-Path $PSScriptRoot ".claude/hooks/guardrails-git.sh"
-if ((-not (Test-Path $guardrailsSh) -or -not $mergeMode) -and (Test-Path $devflowGuardrailsSh)) {
-    Copy-Item $devflowGuardrailsSh $guardrailsSh -Force
+# guardrails-git.sh
+$guardrailsSh = ".claude/hooks/guardrails-git.sh"
+if (-not (Test-Path $guardrailsSh) -or -not $mergeMode) {
+@'
+#!/bin/bash
+# guardrails-git.sh — PreToolUse hook for Bash
+input=$(cat)
+command=$(echo "$input" | python3 -c "import sys,json; print(json.load(sys.stdin)['tool_input']['command'])" 2>/dev/null)
+[ -z "$command" ] && exit 0
+dangerous=(
+  'git push --force' 'git push -f' 'git push origin +'
+  'git reset --hard' 'git checkout .' 'git checkout --'
+  'git restore .' 'git restore --staged .'
+  'git clean -f' 'git clean -fd'
+  'git branch -D' 'git rebase -i HEAD'
+  'git --no-verify' 'git commit --no-verify'
+)
+for pattern in "${dangerous[@]}"; do
+  if [[ "$command" == *"$pattern"* ]]; then
+    echo "{\"action\":\"reject\",\"message\":\"devflow guardrails: blocked dangerous git command: $pattern\"}"
+    exit 0
+  fi
+done
+'@ | Out-File $guardrailsSh -Encoding utf8
     Write-Host "[PASS] guardrails-git.sh installed" -ForegroundColor Green
-} elseif (-not (Test-Path $guardrailsSh)) {
-    Write-Host "[SKIP] guardrails-git.sh not available" -ForegroundColor Yellow
+} else {
+    Write-Host "[SKIP] guardrails-git.sh already exists" -ForegroundColor Yellow
 }
 
-# ---- Step 5.5: Create .devflow/ state directory ----
+# ---- Step 7: Session hook ----
 Write-Host ""
-Write-Host "--- .devflow/ state directory ---" -ForegroundColor Yellow
-$devflowDir = ".devflow"
-if (-not (Test-Path $devflowDir)) {
-    $null = New-Item -ItemType Directory -Path $devflowDir -Force
-    Write-Host "[PASS] $devflowDir/ created" -ForegroundColor Green
-} else {
-    Write-Host "[SKIP] $devflowDir/ already exists" -ForegroundColor Yellow
+Write-Host "--- session hooks ---" -ForegroundColor Yellow
+
+$sessionStart = ".claude/hooks/session-start.ps1"
+if (-not (Test-Path $sessionStart) -or -not $mergeMode) {
+@"
+# session-start.ps1 — devflow session start hook
+Write-Host "devflow: session start" -ForegroundColor Cyan
+`$stateFile = ".devflow/state"
+if (Test-Path `$stateFile) {
+    try {
+        `$state = Get-Content `$stateFile -Raw -Encoding utf8 | ConvertFrom-Json
+        Write-Host "devflow: Phase `$(`$state.phase) | step: `$(`$state.step) | feature: `$(`$state.feature)" -ForegroundColor Cyan
+    } catch { }
 }
-$stateFile = Join-Path $devflowDir "state"
-if (-not (Test-Path $stateFile)) {
-    $initialState = @{
-        phase = 1
-        step = ""
-        feature = ""
-        prd = ""
-        blocker = ""
-        gate_probe = "pending"
-        gate_scenario = "pending"
-        gate_fix = "pending"
-        gate_security = "pending"
-        updatedAt = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-    } | ConvertTo-Json -Compress
-    $initialState | Out-File $stateFile -Encoding utf8
-    Write-Host "[PASS] .devflow/state initialized" -ForegroundColor Green
+"@ | Out-File $sessionStart -Encoding utf8
+    Write-Host "[PASS] session-start.ps1 installed" -ForegroundColor Green
 } else {
-    Write-Host "[SKIP] .devflow/state already exists" -ForegroundColor Yellow
+    Write-Host "[SKIP] session-start.ps1 already exists" -ForegroundColor Yellow
 }
 
-# ---- Step 6: Seed docs/ with merge ----
+# ---- Step 8: Seed docs/ ----
 Write-Host ""
-Write-Host "--- seeding docs/ ---" -ForegroundColor Yellow
+Write-Host "--- seed docs/ ---" -ForegroundColor Yellow
+
+# Create doc directories
+$docDirs = @(
+    "docs/prd",
+    "docs/ux",
+    "docs/adr",
+    "docs/tdd",
+    "docs/superpowers/specs"
+)
+foreach ($d in $docDirs) {
+    if (-not (Test-Path $d)) {
+        $null = New-Item -ItemType Directory -Path $d -Force
+    }
+}
 
 # CONTEXT.md
 $contextMd = "docs/CONTEXT.md"
-if (Test-Path $contextMd) {
-    if ($mergeMode) {
-        if (Test-Path ".\scripts\merge-docs.ps1") {
-            & "$PSScriptRoot\scripts\merge-docs.ps1"
-        } else {
-            Write-Host "[SKIP] merge-docs.ps1 not found" -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "[FRESH] overwriting $contextMd" -ForegroundColor Yellow
-        # Re-seed (same content as below)
-    }
-}
-
-if (-not (Test-Path $contextMd)) {
-    $null = New-Item -ItemType File -Path $contextMd -Force
-    @"
-# Project Context - Ubiquitous Language
+if (-not (Test-Path $contextMd) -or -not $mergeMode) {
+@"
+# Project Context
 
 ## Project
 <!-- TODO: describe what this project does -->
 
 ## Domain Glossary
 <!-- TODO: add key terms and definitions -->
-"@ | Set-Content -Path $contextMd
+"@ | Out-File $contextMd -Encoding utf8
     Write-Host "[PASS] docs/CONTEXT.md seeded" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] docs/CONTEXT.md already exists" -ForegroundColor Yellow
 }
 
-# ADR
-$adrDir = "docs/adr"
-if (Test-Path $adrDir) {
-    if (-not $mergeMode) {
-        Write-Host "[FRESH] docs/adr/ exists but --fresh set" -ForegroundColor Yellow
-    }
-}
-if (-not (Test-Path $adrDir)) {
-    $null = New-Item -ItemType Directory -Path $adrDir -Force
-    @"
+# ADR index
+$adrIndex = "docs/adr/README.md"
+if (-not (Test-Path $adrIndex) -or -not $mergeMode) {
+@"
 # Architecture Decision Records
-
-Each ADR (Architecture Decision Record) captures a decision:
-- **Context** - what problem or constraint drove the decision
-- **Decision** - what was chosen and why alternatives were rejected
-- **Consequences** - what tradeoffs, migrations, or follow-up work result
 
 ## ADR Index
 
 <!-- Add new ADRs below -->
-"@ | Set-Content -Path (Join-Path $adrDir "README.md")
+"@ | Out-File $adrIndex -Encoding utf8
     Write-Host "[PASS] docs/adr/ seeded" -ForegroundColor Green
-}
-
-# TDD
-$tddDir = "docs/tdd"
-if (Test-Path $tddDir) {
-    $existingTdd = Get-ChildItem "$tddDir/*.md" -ErrorAction SilentlyContinue
-    if ($existingTdd.Count -gt 0 -and $mergeMode) {
-        Write-Host "[SKIP] docs/tdd/ already has content - user modifications respected" -ForegroundColor Yellow
-    } elseif ($existingTdd.Count -eq 0 -or -not $mergeMode) {
-        @"
-# Testing Philosophy
-
-## Principles
-
-1. **Test behavior, not implementation** - tests should verify outcomes, not internal details
-2. **Write tests before code** - TDD cycle: Red -> Green -> Refactor
-3. **One assertion per test** - each test should verify one behavior
-4. **Tests are documentation** - a good test suite describes how the system works
-
-## Coverage Goals
-
-- Unit tests: 90%+ coverage on business logic
-- Integration tests: critical paths only
-- E2E tests: happy path + top 3 error scenarios
-"@ | Out-File "$tddDir/testing-philosophy.md" -Encoding utf8
-        Write-Host "[PASS] docs/tdd/ seeded" -ForegroundColor Green
-    }
 } else {
-    $null = New-Item -ItemType Directory -Path $tddDir -Force
-    @"
+    Write-Host "[SKIP] docs/adr/ already exists" -ForegroundColor Yellow
+}
+
+# TDD philosophy
+$tddFile = "docs/tdd/testing-philosophy.md"
+if (-not (Test-Path $tddFile) -or -not $mergeMode) {
+@"
 # Testing Philosophy
 
 ## Principles
 
-1. **Test behavior, not implementation** - tests should verify outcomes, not internal details
-2. **Write tests before code** - TDD cycle: Red -> Green -> Refactor
-3. **One assertion per test** - each test should verify one behavior
-4. **Tests are documentation** - a good test suite describes how the system works
-
-## Coverage Goals
-
-- Unit tests: 90%+ coverage on business logic
-- Integration tests: critical paths only
-- E2E tests: happy path + top 3 error scenarios
-"@ | Out-File "$tddDir/testing-philosophy.md" -Encoding utf8
+1. **Test behavior, not implementation** — tests should verify outcomes, not internals
+2. **Write tests before code** — TDD cycle: Red → Green → Refactor
+3. **One assertion per test** — each test verifies one behavior
+4. **Tests are documentation** — a good test suite describes how the system works
+"@ | Out-File $tddFile -Encoding utf8
     Write-Host "[PASS] docs/tdd/ seeded" -ForegroundColor Green
+} else {
+    Write-Host "[SKIP] docs/tdd/ already exists" -ForegroundColor Yellow
 }
 
-# ---- Step 7: .gitignore merge ----
+# ---- Step 9: .gitignore ----
 Write-Host ""
 Write-Host "--- .gitignore ---" -ForegroundColor Yellow
-if (Test-Path ".\scripts\merge-gitignore.ps1") {
-    & "$PSScriptRoot\scripts\merge-gitignore.ps1"
+$gitignore = ".gitignore"
+if (-not (Test-Path $gitignore) -or -not $mergeMode) {
+@"
+# devflow
+.devflow/
+.beads/
+.gitnexus/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+"@ | Out-File $gitignore -Encoding utf8
+    Write-Host "[PASS] .gitignore created" -ForegroundColor Green
 } else {
-    Write-Host "[SKIP] merge-gitignore.ps1 not found" -ForegroundColor Yellow
+    # Append devflow entries if missing
+    $content = Get-Content $gitignore -Raw -Encoding utf8
+    $devflowEntries = @(".devflow/", ".beads/", ".gitnexus/")
+    $added = $false
+    foreach ($entry in $devflowEntries) {
+        if ($content -notmatch [regex]::Escape($entry)) {
+            $content += "`n$entry"
+            $added = $true
+        }
+    }
+    if ($added) {
+        $content | Out-File $gitignore -Encoding utf8
+        Write-Host "[PASS] devflow entries added to .gitignore" -ForegroundColor Green
+    } else {
+        Write-Host "[SKIP] .gitignore already has devflow entries" -ForegroundColor Yellow
+    }
 }
 
-# ---- Step 8: Install autoresearch (unless opted out) ----
-if ($SkipAutoresearch -or $env:DEVFLOW_NO_AUTORESEARCH -eq "1") {
+# ---- Step 10: Autoresearch ----
+if (-not $SkipAutoresearch) {
     Write-Host ""
     Write-Host "--- autoresearch ---" -ForegroundColor Yellow
-    Write-Host "[SKIP] opted out via flag or DEVFLOW_NO_AUTORESEARCH env var" -ForegroundColor Gray
-} else {
-    Write-Host ""
-    Write-Host "--- autoresearch install ---" -ForegroundColor Yellow
-    $skillsCmd = Get-Command "skills" -ErrorAction SilentlyContinue
-    if ($skillsCmd) {
-        npx skills add uditgoenka/autoresearch 2>&1 | Out-Null
+    try {
+        $npxCmd = if ($IsWindows -or $env:OS) { "npx.cmd" } else { "npx" }
+        & $npxCmd --yes skills add uditgoenka/autoresearch --yes --claude 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[PASS] autoresearch installed" -ForegroundColor Green
-            Write-Host "       Auto-optimization at probe/scenario/fix/security gates." -ForegroundColor Gray
-            Write-Host "       Disable: `$env:DEVFLOW_NO_AUTORESEARCH=1" -ForegroundColor Gray
         } else {
-            Write-Host "[WARN] autoresearch install failed" -ForegroundColor Yellow
-            Write-Host "       Run manually: npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
+            Write-Host "[WARN] autoresearch install had issues" -ForegroundColor Yellow
         }
-    } else {
-        Write-Host "[WARN] npx skills not available - install autoresearch manually:" -ForegroundColor Yellow
-        Write-Host "       npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
+    } catch {
+        Write-Host "[WARN] autoresearch install failed: $_" -ForegroundColor Yellow
     }
 }
 
-# ---- Optional: Auto-Designer generators ----
-if ($WithDesigner) {
-    Write-Host ""
-    Write-Host "--- auto-designer generators ---" -ForegroundColor Yellow
-    Write-Host "  Installing optional UI generation tools..." -ForegroundColor Gray
-    & "$PSScriptRoot\scripts\auto-designer.ps1" -Install openui 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "  [SKIP] OpenUI install skipped (install manually: pip install openui)" -ForegroundColor Yellow
-    }
-    Write-Host "[PASS] auto-designer generators ready" -ForegroundColor Green
-}
-
-# ---- Step 9: Superpowers check ----
+# ---- Summary ----
 Write-Host ""
-Write-Host "--- superpowers check ---" -ForegroundColor Yellow
-if (Test-Path ".\scripts\check-superpowers.ps1") {
-    & "$PSScriptRoot\scripts\check-superpowers.ps1"
-} else {
-    Write-Host "[SKIP] check-superpowers.ps1 not found" -ForegroundColor Yellow
-}
-
-# ---- Step 10: Summary ----
+Write-Host "=== devflow scaffold ready ===" -ForegroundColor Cyan
+Write-Host "  .devflow/     state tracking" -ForegroundColor Gray
+Write-Host "  .beads/       issue tracking" -ForegroundColor Gray
+Write-Host "  .gitnexus/    code graph (if Docker available)" -ForegroundColor Gray
+Write-Host "  .claude/      hooks + settings" -ForegroundColor Gray
+Write-Host "  docs/         seed docs" -ForegroundColor Gray
+Write-Host "  .gitignore    devflow entries" -ForegroundColor Gray
 Write-Host ""
-Write-Host "=== devflow ready ===" -ForegroundColor Cyan
-if ($gitnexusOk) {
-    Write-Host "  phase 3:  beads + gitnexus + docs + guardrails + autoresearch + merge helpers" -ForegroundColor Gray
-} else {
-    Write-Host "  phase 3:  beads + docs + guardrails + autoresearch (gitnexus: DEGRADED)" -ForegroundColor Yellow
-    Write-Host "            fix: run 'gitnexus analyze . --force' in native PowerShell" -ForegroundColor Gray
-}
-Write-Host "  scripts:   merge-settings, merge-guardrails, merge-gitignore, merge-docs, check-superpowers" -ForegroundColor Gray
-Write-Host "  merge:     existing configs detected and extended (default mode)" -ForegroundColor Gray
-Write-Host "  phase 4:   superpowers-* pipeline + grill + 4 autoresearch gates" -ForegroundColor Gray
-Write-Host "  opt-out:   `$env:DEVFLOW_NO_AUTORESEARCH=1  (disable all auto gates)" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Start a dev task in Claude Code - devflow auto-triggers." -ForegroundColor Green
+Write-Host "Open in Claude Code — devflow guides the pipeline." -ForegroundColor Green

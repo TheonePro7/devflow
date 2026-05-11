@@ -1,44 +1,38 @@
 <#
 .SYNOPSIS
-    One-command devflow installer with merge-mode setup.
+    One-command devflow installer for a project.
 .DESCRIPTION
-    Checks prerequisites, clones devflow if missing, installs tools,
-    runs setup with merge-mode flag.
-    Designed to be run after: git clone https://github.com/TheonePro7/devflow.git
+    Installs devflow tools (beads, gitnexus, autoresearch) and runs
+    devflow init to scaffold the project. No repo cloning — devflow
+    CLI is expected to be installed globally via pip:
+      pip install devflow
+    or run directly from source:
+      python -m devflow.cli.main init
+
+    Run this inside your project directory.
 .USAGE
     cd your-project
     powershell -File path/to/devflow/install.ps1
     powershell -File path/to/devflow/install.ps1 --offline
-    powershell -File path/to/devflow/install.ps1 -DevflowRepo https://github.com/TheonePro7/devflow.git
-.PARAMETER DevflowDir
-    Path to devflow directory. Default: ~/.claude/skills/devflow
-.PARAMETER DevflowRepo
-    Git URL for devflow repo. Default: https://github.com/TheonePro7/devflow.git
-.PARAMETER GitProxy
-    HTTP proxy for git clone. Default: none.
+    powershell -File path/to/devflow/install.ps1 --skip-autoresearch
 .PARAMETER Offline
-    Skip git clone; assume devflow is already present.
+    Skip tool installation; assume prerequisites are already installed.
 .PARAMETER SkipAutoresearch
     Skip autoresearch installation.
+.PARAMETER DevflowSrc
+    Path to devflow source directory. If not set, tries pip-installed
+    devflow, then falls back to python -m devflow.cli.main.
 #>
 
 param(
-    [string]$DevflowDir = "",
-    [string]$DevflowRepo = "https://github.com/TheonePro7/devflow.git",
-    [string]$GitProxy = "",
     [switch]$Offline,
-    [switch]$SkipAutoresearch
+    [switch]$SkipAutoresearch,
+    [string]$DevflowSrc = ""
 )
 
 $ErrorActionPreference = "Stop"
-$homeDir = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
-if (-not $homeDir) { $homeDir = "~" }
 
-if ([string]::IsNullOrEmpty($DevflowDir)) {
-    $DevflowDir = Join-Path $homeDir ".claude\skills\devflow"
-}
-
-Write-Host "=== devflow installer ===" -ForegroundColor Cyan
+Write-Host "=== devflow project installer ===" -ForegroundColor Cyan
 Write-Host ""
 
 # ---- Step 1: Check base dependencies ----
@@ -64,83 +58,151 @@ if ($baseMissing.Count -gt 0) {
 }
 Write-Host "[PASS] Go + Node.js + Git" -ForegroundColor Green
 
-# ---- Step 2: Clone devflow (unless offline) ----
+# ---- Step 2: Locate devflow CLI ----
 Write-Host ""
-Write-Host "--- devflow skill ---" -ForegroundColor Yellow
+Write-Host "--- devflow CLI ---" -ForegroundColor Yellow
 
-if ($Offline.IsPresent) {
-    if (-not (Test-Path $DevflowDir)) {
-        Write-Host "[FAIL] --offline mode but devflow not found at:" -ForegroundColor Red
-        Write-Host "       $DevflowDir" -ForegroundColor Red
-        Write-Host "       Clone manually first:" -ForegroundColor Yellow
-        Write-Host "       git clone $DevflowRepo `"$DevflowDir`"" -ForegroundColor Cyan
-        exit 1
-    }
-    Write-Host "[SKIP] Offline mode - using existing $DevflowDir" -ForegroundColor Yellow
+$devflowCmd = $null
+if (-not [string]::IsNullOrEmpty($DevflowSrc)) {
+    $devflowCmd = "python -m devflow.cli.main"
+    $env:PYTHONPATH = $DevflowSrc
+    Write-Host "[INFO] Using devflow source: $DevflowSrc" -ForegroundColor Gray
+} elseif (($null -ne (Get-Command "devflow" -ErrorAction SilentlyContinue))) {
+    $devflowCmd = "devflow"
+    Write-Host "[PASS] devflow CLI found in PATH" -ForegroundColor Green
+} else {
+    try {
+        python -c "import devflow; print('ok')" 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $devflowCmd = "python -m devflow.cli.main"
+            Write-Host "[PASS] devflow found via python -m" -ForegroundColor Green
+        }
+    } catch { }
 }
-else {
-    if (Test-Path (Join-Path $DevflowDir "setup.ps1")) {
-        Write-Host "[SKIP] devflow already installed at $DevflowDir" -ForegroundColor Yellow
-    } else {
-        Write-Host "[INFO] Cloning devflow to $DevflowDir ..." -ForegroundColor Yellow
-        # Ensure parent directory exists
-        $parentDir = Split-Path $DevflowDir -Parent
-        if (-not (Test-Path $parentDir)) {
-            New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
-        }
 
-        $gitArgs = @("clone", $DevflowRepo, "`"$DevflowDir`"")
-        if (-not [string]::IsNullOrEmpty($GitProxy)) {
-            $gitArgs = @("-c", "http.proxy=$GitProxy") + $gitArgs
-            Write-Host "       Using proxy: $GitProxy" -ForegroundColor Gray
-        }
+if (-not $devflowCmd) {
+    Write-Host "[INFO] devflow CLI not found. Install with:" -ForegroundColor Yellow
+    Write-Host "       pip install devflow" -ForegroundColor Cyan
+    Write-Host "  Or set -DevflowSrc to point to the devflow repository." -ForegroundColor Cyan
+    Write-Host "  Continuing with tool installation only (run devflow init later)..." -ForegroundColor Yellow
+}
 
+# ---- Step 3: Install beads ----
+Write-Host ""
+Write-Host "--- beads ---" -ForegroundColor Yellow
+$beadsOk = $false
+
+if (-not $Offline) {
+    if (-not (Get-Command "bd" -ErrorAction SilentlyContinue)) {
+        Write-Host "[INFO] beads (bd) not found - installing via go..." -ForegroundColor Yellow
         try {
-            & "git" $gitArgs 2>&1 | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw "git clone failed (exit $LASTEXITCODE)" }
-            Write-Host "[PASS] devflow cloned" -ForegroundColor Green
+            go install github.com/gastownhall/beads/cmd/bd@latest 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                $env:Path = [Environment]::GetEnvironmentVariable("Path", "User") + ";" + [Environment]::GetEnvironmentVariable("Path", "Machine")
+                Write-Host "[PASS] beads installed" -ForegroundColor Green
+                $beadsOk = $true
+            } else {
+                Write-Host "[FAIL] go install beads failed" -ForegroundColor Red
+            }
         } catch {
-            Write-Host "[FAIL] Could not clone devflow: $_" -ForegroundColor Red
-            Write-Host "       Clone manually: git clone $DevflowRepo `"$DevflowDir`"" -ForegroundColor Cyan
-            exit 1
+            Write-Host "[FAIL] beads install failed: $_" -ForegroundColor Red
         }
+    } else {
+        Write-Host "[PASS] beads already installed" -ForegroundColor Green
+        $beadsOk = $true
+    }
+} else {
+    $beadsOk = (Get-Command "bd" -ErrorAction SilentlyContinue) -ne $null
+    Write-Host "[SKIP] Offline mode - beads: $(if($beadsOk){ 'found' }else{ 'missing' })" -ForegroundColor Yellow
+}
+
+# ---- Step 4: Install gitnexus ----
+Write-Host ""
+Write-Host "--- gitnexus ---" -ForegroundColor Yellow
+$gitnexusOk = $false
+
+if (-not $Offline) {
+    if (-not (Get-Command "gitnexus" -ErrorAction SilentlyContinue)) {
+        Write-Host "[INFO] gitnexus not found - installing via npm..." -ForegroundColor Yellow
+        try {
+            npm install -g gitnexus 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "[PASS] gitnexus installed" -ForegroundColor Green
+                $gitnexusOk = $true
+            } else {
+                Write-Host "[FAIL] npm install gitnexus failed" -ForegroundColor Red
+            }
+        } catch {
+            Write-Host "[FAIL] gitnexus install failed: $_" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "[PASS] gitnexus already installed" -ForegroundColor Green
+        $gitnexusOk = $true
+    }
+} else {
+    $gitnexusOk = (Get-Command "gitnexus" -ErrorAction SilentlyContinue) -ne $null
+    Write-Host "[SKIP] Offline mode - gitnexus: $(if($gitnexusOk){ 'found' }else{ 'missing' })" -ForegroundColor Yellow
+}
+
+# ---- Step 5: Install autoresearch ----
+if (-not $SkipAutoresearch) {
+    Write-Host ""
+    Write-Host "--- autoresearch ---" -ForegroundColor Yellow
+    if (-not $Offline) {
+        try {
+            $npxCmd = if ($IsWindows -or $env:OS) { "npx.cmd" } else { "npx" }
+            & $npxCmd --yes skills add uditgoenka/autoresearch --yes --claude 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "[PASS] autoresearch installed" -ForegroundColor Green
+            } else {
+                Write-Host "[WARN] autoresearch install had issues" -ForegroundColor Yellow
+                Write-Host "       Run manually: npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
+            }
+        } catch {
+            Write-Host "[WARN] autoresearch install failed: $_" -ForegroundColor Yellow
+            Write-Host "       Run manually: npx skills add uditgoenka/autoresearch" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "[SKIP] Offline mode - skip autoresearch install" -ForegroundColor Yellow
     }
 }
 
-# ---- Step 3: Superpowers check ----
+# ---- Step 6: Run devflow init ----
 Write-Host ""
-Write-Host "--- superpowers plugin ---" -ForegroundColor Yellow
-$superpowersCheck = Join-Path $DevflowDir "scripts\check-superpowers.ps1"
-if (Test-Path $superpowersCheck) {
-    & $superpowersCheck
-    if ($LASTEXITCODE -ne 0) {
-        # Already printed the warning inside check-superpowers
+Write-Host "--- project scaffold ---" -ForegroundColor Yellow
+
+if ($devflowCmd) {
+    $initCmd = "$devflowCmd init"
+    if ($Offline) { $initCmd += " --offline" }
+    try {
+        Invoke-Expression $initCmd 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[PASS] devflow init complete" -ForegroundColor Green
+        } else {
+            Write-Host "[WARN] devflow init had issues" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "[WARN] devflow init failed: $_" -ForegroundColor Yellow
+        Write-Host "       Run manually: $devflowCmd init" -ForegroundColor Gray
     }
 } else {
-    Write-Host "[INFO] Run in Claude Code to complete setup:" -ForegroundColor Yellow
-    Write-Host "       /plugin install superpowers@claude-plugins-official" -ForegroundColor Cyan
+    Write-Host "[INFO] devflow CLI not available - scaffold manually:" -ForegroundColor Yellow
+    Write-Host "       1. Install: pip install devflow" -ForegroundColor Cyan
+    Write-Host "       2. Init:    devflow init" -ForegroundColor Cyan
 }
 
-# ---- Step 4: Run setup ----
+# ---- Step 7: Summary ----
 Write-Host ""
-Write-Host "--- running setup ---" -ForegroundColor Yellow
-$setupScript = Join-Path $DevflowDir "setup.ps1"
-if (Test-Path $setupScript) {
-    $setupArgs = @()
-    if ($SkipAutoresearch) { $setupArgs += "--skip-autoresearch" }
-    & $setupScript $setupArgs
+Write-Host "=== install complete ===" -ForegroundColor Cyan
+Write-Host "  beads:       $(if($beadsOk){ '✅' }else{ '❌' })" -ForegroundColor Gray
+Write-Host "  gitnexus:    $(if($gitnexusOk){ '✅' }else{ '⚠️' })" -ForegroundColor Gray
+$arLabel = "attempted"
+if ($SkipAutoresearch) { $arLabel = "skipped" }
+Write-Host "  autoresearch: $arLabel" -ForegroundColor Gray
+if ($devflowCmd) {
+    Write-Host "  scaffold:    init complete" -ForegroundColor Gray
 } else {
-    Write-Host "[FAIL] setup.ps1 not found at $setupScript" -ForegroundColor Red
-    exit 1
+    Write-Host "  scaffold:    run 'devflow init' after installing CLI" -ForegroundColor Yellow
 }
-
-# ---- Step 5: Post-install instructions ----
 Write-Host ""
-Write-Host "=== Install complete ===" -ForegroundColor Cyan
-Write-Host "  devflow installed at: $DevflowDir" -ForegroundColor Gray
-Write-Host "  Phase 1 setup is already complete." -ForegroundColor Gray
-Write-Host "  Open this project in Claude Code — SessionStart hook confirms readiness." -ForegroundColor Gray
-Write-Host "  If superpowers is missing, type: /plugin install superpowers@claude-plugins-official" -ForegroundColor Cyan
-Write-Host "  Start a development task — devflow guides the pipeline" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Happy coding!" -ForegroundColor Green
+Write-Host "Open this project in Claude Code — devflow guides the pipeline." -ForegroundColor Green

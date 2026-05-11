@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# One-command devflow installer with merge-mode setup.
-# Checks prerequisites, clones devflow if missing, installs tools,
-# runs setup with merge-mode flag.
+# One-command devflow installer for a project.
+# Installs tools (beads, gitnexus, autoresearch) and runs devflow init.
+# No repo cloning — devflow CLI is expected to be installed globally.
 #
 # Usage:
 #   cd your-project
 #   bash /path/to/devflow/install.sh
 #   bash /path/to/devflow/install.sh --offline
-#   GIT_PROXY=http://proxy:8080 bash /path/to/devflow/install.sh
-#
-# After install, in Claude Code run:
-#   /plugin install superpowers@claude-plugins-official
+#   bash /path/to/devflow/install.sh --skip-autoresearch
 
 set -euo pipefail
 
@@ -21,22 +18,20 @@ CYAN='\033[0;36m'
 GRAY='\033[0;90m'
 NC='\033[0m'
 
-# Configuration
-DEVFLOW_DIR="${DEVFLOW_DIR:-$HOME/.claude/skills/devflow}"
-DEVFLOW_REPO="${DEVFLOW_REPO:-https://github.com/TheonePro7/devflow.git}"
-GIT_PROXY="${GIT_PROXY:-}"
 OFFLINE=false
 SKIP_AUTORESEARCH=false
+DEVFLOW_SRC=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --offline) OFFLINE=true; shift ;;
     --skip-autoresearch) SKIP_AUTORESEARCH=true; shift ;;
+    --devflow-src) DEVFLOW_SRC="$2"; shift 2 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
-echo -e "${CYAN}=== devflow installer ===${NC}"
+echo -e "${CYAN}=== devflow project installer ===${NC}"
 echo ""
 
 # ---- Step 1: Check base dependencies ----
@@ -62,73 +57,121 @@ if [ ${#BASE_MISSING[@]} -gt 0 ]; then
 fi
 echo -e "${GREEN}[PASS] Go + Node.js + Git${NC}"
 
-# ---- Step 2: Clone devflow (unless offline) ----
+# ---- Step 2: Locate devflow CLI ----
 echo ""
-echo -e "${YELLOW}--- devflow skill ---${NC}"
+echo -e "${YELLOW}--- devflow CLI ---${NC}"
+DEVFLOW_CMD=""
 
-if [ "$OFFLINE" = true ]; then
-  if [ ! -d "$DEVFLOW_DIR" ]; then
-    echo -e "${RED}[FAIL] --offline mode but devflow not found at:${NC}"
-    echo -e "${RED}       $DEVFLOW_DIR${NC}"
-    echo -e "${YELLOW}       Clone manually first:${NC}"
-    echo -e "${CYAN}       git clone $DEVFLOW_REPO \"$DEVFLOW_DIR\"${NC}"
-    exit 1
-  fi
-  echo -e "${YELLOW}[SKIP] Offline mode — using existing $DEVFLOW_DIR${NC}"
-elif [ -f "$DEVFLOW_DIR/setup.sh" ]; then
-  echo -e "${YELLOW}[SKIP] devflow already installed at $DEVFLOW_DIR${NC}"
+if [ -n "$DEVFLOW_SRC" ]; then
+  DEVFLOW_CMD="python -m devflow.cli.main"
+  export PYTHONPATH="$DEVFLOW_SRC"
+  echo -e "${GRAY}[INFO] Using devflow source: $DEVFLOW_SRC${NC}"
+elif command -v devflow &>/dev/null; then
+  DEVFLOW_CMD="devflow"
+  echo -e "${GREEN}[PASS] devflow CLI found in PATH${NC}"
 else
-  echo -e "${YELLOW}[INFO] Cloning devflow to $DEVFLOW_DIR ...${NC}"
-  mkdir -p "$(dirname "$DEVFLOW_DIR")"
-
-  GIT_ARGS=()
-  if [ -n "$GIT_PROXY" ]; then
-    GIT_ARGS+=(--config "http.proxy=$GIT_PROXY")
-    echo -e "${GRAY}       Using proxy: $GIT_PROXY${NC}"
+  if python -c "import devflow; print('ok')" 2>/dev/null; then
+    DEVFLOW_CMD="python -m devflow.cli.main"
+    echo -e "${GREEN}[PASS] devflow found via python -m${NC}"
   fi
+fi
 
-  if git clone "${GIT_ARGS[@]}" "$DEVFLOW_REPO" "$DEVFLOW_DIR"; then
-    echo -e "${GREEN}[PASS] devflow cloned${NC}"
+if [ -z "$DEVFLOW_CMD" ]; then
+  echo -e "${YELLOW}[INFO] devflow CLI not found. Install with:${NC}"
+  echo -e "${CYAN}       pip install devflow${NC}"
+  echo -e "${YELLOW}       Continuing with tool installation only (run devflow init later)...${NC}"
+fi
+
+# ---- Step 3: Install beads ----
+echo ""
+echo -e "${YELLOW}--- beads ---${NC}"
+BEADS_OK=false
+
+if [ "$OFFLINE" = false ]; then
+  if ! command -v bd &>/dev/null; then
+    echo -e "${YELLOW}[INFO] beads (bd) not found - installing via go...${NC}"
+    if go install github.com/gastownhall/beads/cmd/bd@latest 2>&1; then
+      echo -e "${GREEN}[PASS] beads installed${NC}"
+      BEADS_OK=true
+    else
+      echo -e "${RED}[FAIL] go install beads failed${NC}"
+    fi
   else
-    echo -e "${RED}[FAIL] Could not clone devflow${NC}"
-    echo -e "${CYAN}       Clone manually: git clone $DEVFLOW_REPO \"$DEVFLOW_DIR\"${NC}"
-    exit 1
+    echo -e "${GREEN}[PASS] beads already installed${NC}"
+    BEADS_OK=true
+  fi
+else
+  BEADS_OK=$(command -v bd &>/dev/null && echo true || echo false)
+  echo -e "${YELLOW}[SKIP] Offline mode - beads: $( [ "$BEADS_OK" = true ] && echo 'found' || echo 'missing' )${NC}"
+fi
+
+# ---- Step 4: Install gitnexus ----
+echo ""
+echo -e "${YELLOW}--- gitnexus ---${NC}"
+GITNEXUS_OK=false
+
+if [ "$OFFLINE" = false ]; then
+  if ! command -v gitnexus &>/dev/null; then
+    echo -e "${YELLOW}[INFO] gitnexus not found - installing via npm...${NC}"
+    if npm install -g gitnexus 2>&1; then
+      echo -e "${GREEN}[PASS] gitnexus installed${NC}"
+      GITNEXUS_OK=true
+    else
+      echo -e "${RED}[FAIL] npm install gitnexus failed${NC}"
+    fi
+  else
+    echo -e "${GREEN}[PASS] gitnexus already installed${NC}"
+    GITNEXUS_OK=true
+  fi
+else
+  GITNEXUS_OK=$(command -v gitnexus &>/dev/null && echo true || echo false)
+  echo -e "${YELLOW}[SKIP] Offline mode - gitnexus: $( [ "$GITNEXUS_OK" = true ] && echo 'found' || echo 'missing' )${NC}"
+fi
+
+# ---- Step 5: Install autoresearch ----
+if [ "$SKIP_AUTORESEARCH" = false ]; then
+  echo ""
+  echo -e "${YELLOW}--- autoresearch ---${NC}"
+  if [ "$OFFLINE" = false ]; then
+    if npx --yes skills add uditgoenka/autoresearch --yes --claude 2>&1; then
+      echo -e "${GREEN}[PASS] autoresearch installed${NC}"
+    else
+      echo -e "${YELLOW}[WARN] autoresearch install had issues${NC}"
+      echo -e "${GRAY}       Run manually: npx skills add uditgoenka/autoresearch${NC}"
+    fi
+  else
+    echo -e "${YELLOW}[SKIP] Offline mode - skip autoresearch install${NC}"
   fi
 fi
 
-# ---- Step 3: Superpowers check ----
+# ---- Step 6: Run devflow init ----
 echo ""
-echo -e "${YELLOW}--- superpowers plugin ---${NC}"
-if [ -f "$DEVFLOW_DIR/scripts/check-superpowers.sh" ]; then
-  bash "$DEVFLOW_DIR/scripts/check-superpowers.sh" || true
-else
-  echo -e "${YELLOW}[INFO] Run in Claude Code to complete setup:${NC}"
-  echo -e "${CYAN}       /plugin install superpowers@claude-plugins-official${NC}"
-fi
+echo -e "${YELLOW}--- project scaffold ---${NC}"
 
-# ---- Step 4: Run setup ----
-echo ""
-echo -e "${YELLOW}--- running setup ---${NC}"
-SETUP_SCRIPT="$DEVFLOW_DIR/setup.sh"
-if [ -f "$SETUP_SCRIPT" ]; then
-  SETUP_ARGS=()
-  if [ "$SKIP_AUTORESEARCH" = true ]; then
-    SETUP_ARGS+=(--skip-autoresearch)
+if [ -n "$DEVFLOW_CMD" ]; then
+  INIT_CMD="$DEVFLOW_CMD init"
+  if [ "$OFFLINE" = true ]; then INIT_CMD="$INIT_CMD --offline"; fi
+  if eval "$INIT_CMD"; then
+    echo -e "${GREEN}[PASS] devflow init complete${NC}"
+  else
+    echo -e "${YELLOW}[WARN] devflow init had issues${NC}"
   fi
-  bash "$SETUP_SCRIPT" "${SETUP_ARGS[@]}"
 else
-  echo -e "${RED}[FAIL] setup.sh not found at $SETUP_SCRIPT${NC}"
-  exit 1
+  echo -e "${YELLOW}[INFO] devflow CLI not available - scaffold manually:${NC}"
+  echo -e "${CYAN}       1. Install: pip install devflow${NC}"
+  echo -e "${CYAN}       2. Init:    devflow init${NC}"
 fi
 
-# ---- Step 5: Post-install instructions ----
+# ---- Step 7: Summary ----
 echo ""
-echo -e "${CYAN}=== Install complete ===${NC}"
-echo -e "${GRAY}  devflow installed at: $DEVFLOW_DIR${NC}"
-echo -e "${GRAY}  To complete setup, open this project in Claude Code and:${NC}"
-echo -e "${GRAY}  1. Phase 1 setup is already complete.${NC}"
-echo -e "${GRAY}  2. Open this project in Claude Code — SessionStart hook confirms readiness.${NC}"
-echo -e "${CYAN}  3. If superpowers is missing, type: /plugin install superpowers@claude-plugins-official${NC}"
-echo -e "${GRAY}  4. Start a development task — devflow guides the pipeline${NC}"
+echo -e "${CYAN}=== install complete ===${NC}"
+echo -e "${GRAY}  beads:       $( [ "$BEADS_OK" = true ] && echo 'installed' || echo 'missing' )${NC}"
+echo -e "${GRAY}  gitnexus:    $( [ "$GITNEXUS_OK" = true ] && echo 'installed' || echo 'missing' )${NC}"
+echo -e "${GRAY}  autoresearch: $( [ "$SKIP_AUTORESEARCH" = true ] && echo 'skipped' || echo 'attempted' )${NC}"
+if [ -n "$DEVFLOW_CMD" ]; then
+  echo -e "${GRAY}  scaffold:    init complete${NC}"
+else
+  echo -e "${YELLOW}  scaffold:    run 'devflow init' after installing CLI${NC}"
+fi
 echo ""
-echo -e "${GREEN}Happy coding!${NC}"
+echo -e "${GREEN}Open this project in Claude Code — devflow guides the pipeline.${NC}"

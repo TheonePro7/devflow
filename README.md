@@ -6,7 +6,7 @@
 
 devflow 是面向 Claude Code 的全生命周期产品编排器。从**灵感到成品**，覆盖 5 个阶段：创意梳理（Phase 1）→ 前端设计（Phase 2）→ 项目初始化（Phase 3）→ 开发循环（Phase 4）→ 会话收尾（Phase 5）。
 
-包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**（通过 Docker 运行，绕过 Windows tree-sitter 兼容性问题）、**autoresearch 自动优化**（4 个自动门）、**screenshot-to-code 前端生成**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
+包装 [obra/superpowers](https://github.com/obra/superpowers) 的 14-skill 管道，注入 **beads 任务追踪**、**gitnexus 代码图谱**（通过 Docker 运行，绕过 Windows tree-sitter 兼容性问题）、**autoresearch 自动优化**（probe/security/optimize 三重门禁）、**screenshot-to-code 前端生成**、**plan-grill 拷问**、**PRD→beads 自动拆分**、**TDD 深度参考**。同时从 [mattpocock/skills](https://github.com/mattpocock/skills) 吸收了 Git guardrails、领域词汇表 (CONTEXT.md) 和架构决策记录 (ADR) 等模式。
 
 即使没有技术背景，也可以从一个模糊的想法开始，经过结构化引导，最终落地为可交付的产品。
 
@@ -793,6 +793,12 @@ devflow 构建了**四层防御链**，从全局到项目级别逐层拦截，�
 | `phase` | 当前阶段 (1, 2, 3, 4, 5) |
 | `step` | 当前步骤 (brainstorming, grill, probe, plans, scenario, impl, review, security) |
 | `feature` | 正在开发的功能描述 |
+| `prd` | PRD 文件路径 |
+| `blocker` | 当前阻塞原因（为空则无阻塞）|
+| `gate_probe` | Probe 门禁状态 (pending/done/skipped) |
+| `gate_scenario` | Scenario 门禁状态 (pending/done/skipped) |
+| `gate_fix` | Fix 门禁状态 (pending/done/skipped) |
+| `gate_security` | Security 门禁状态 (pending/done/skipped) |
 | `updatedAt` | 最后更新时间 |
 
 **更新规则**：每完成一步立即更新。agent 和 hook 都以此文件为单一事实来源。
@@ -847,12 +853,10 @@ devflow/
 │   │   ├── state_cmd.py            # devflow state — 查看当前阶段
 │   │   ├── log_cmd.py              # devflow log — 状态转移时间线
 │   │   ├── task_cmd.py             # devflow task — 任务管理（create/list/show）
-│   │   ├── dev_cmd.py              # devflow dev — 开发循环（start/finish/next/status）
+│   │   ├── dev_cmd.py              # devflow dev — 开发循环（brainstorm/execute/start/finish/next/status）
 │   │   ├── gate_cmd.py             # devflow gate — 门禁管理
 │   │   ├── sync_cmd.py             # devflow sync — 同步状态
-│   │   ├── doctor_cmd.py           # devflow doctor — 一键环境诊断
-│   │   ├── help_cmd.py             # devflow guide — 工作流地图
-│   │   └── gate_cmd.py             # devflow gate — 4 种门禁条件
+│   │   └── doctor_cmd.py           # devflow doctor — 一键环境诊断（含 deps/hooks/beads/gitnexus 检测）
 │   ├── engine/                     # 核心引擎
 │   │   ├── state_machine.py        # 5 阶段状态机（Phase dataclass + StateMachine）
 │   │   ├── gates.py                # 4 硬编码门禁条件 + escalation 3 次重试
@@ -860,7 +864,7 @@ devflow/
 │   ├── protocols/                  # 工具适配器
 │   │   ├── beads_adapter.py        # beads CLI 包装（条件检测 + 状态记录）
 │   │   ├── gitnexus_adapter.py     # gitnexus CLI + Docker 回退（Windows SIGSEGV 绕过）
-│   │   └── autoresearch_adapter.py # autoresearch 4 门（probe/security/optimize/fix）
+│   │   └── autoresearch_adapter.py # autoresearch 3 门（probe/security/optimize）
 │   ├── utils.py                    # 共享工具（detect_test_commands）
 │   └── data/
 │       └── phases.json             # 5 阶段定义 + 条件
@@ -983,14 +987,20 @@ devflow/
 | `devflow ideate` | 4 阶段交互式需求梳理 |
 | `devflow prd` | ideate JSON → PRD markdown |
 | `devflow bootstrap` | 一键 `init → doctor → CONTEXT.md → transition → ideate` |
-| `devflow state` | 查看当前阶段 |
+| `devflow state` | 查看当前阶段（支持 `--path` 指定其他项目）|
 | `devflow transition phase-N/start` | 进入下一阶段 |
 | `devflow log` | 查看状态转移历史 |
 | `devflow task create/list/show` | 任务管理 |
 | `devflow dev start/finish/next/status` | 开发循环 |
-| `devflow gate check/run-impact-analysis/...` | 门禁管理 |
-| `devflow sync` | 同步状态 |
-| `devflow doctor` | 环境诊断 |
+| `devflow dev brainstorm <task-id>` | 启动设计探索 |
+| `devflow dev execute <plan-file>` | 执行开发管道 |
+| `devflow gate check <task_id>` | 门禁综合检查 |
+| `devflow gate run-impact-analysis <task_id>` | 影响分析门禁 |
+| `devflow gate run-verification <task_id>` | 验证门禁 |
+| `devflow gate run-security <task_id>` | 安全审计门禁 |
+| `devflow gate close <task_id>` | 通过门禁，关闭 task |
+| `devflow sync` | 同步各工具状态到 beads |
+| `devflow doctor` | 一键环境诊断 |
 | `devflow guide` | 工作流地图 |
 
 ---
@@ -1160,7 +1170,7 @@ bash uninstall.sh --all --force
 | 状态追踪 | **每步提醒** | UserPromptSubmit hook 每次用户消息注入当前 phase/step/feature |
 | 跳步骤拦截 | **物理阻断** | PreToolUse (Edit\|Write) hook 检查阶段合法性，跳步骤发出告警 |
 | Git guardrails | 自动 | PreToolUse (Bash) hook 拦截每个危险 git 命令 |
-| Autoresearch 4 门 | 自动 | probe -> scenario -> fix -> security 在管道中自动触发 |
+| Autoresearch 门禁 | 自动 | probe → security → optimize 在管道中自动触发 |
 | Phase 4 开发管道 | 自动 | 用户提出需求后，devflow 自动按 1->1.5->1.75->2->2.5->3->review->2.75 编排 |
 | Phase 5 收尾 | 确认 | 会话结束前 agent 会汇总报告并等待确认后再关闭 |
 
@@ -1333,7 +1343,7 @@ bash ~/.claude/skills/devflow/install.sh
 | [beads](https://github.com/gastownhall/beads) | **任务追踪** | Phase 3 自动安装并初始化，Phase 4 创建/更新 issues，Phase 5 关闭 |
 | [gitnexus](https://www.npmjs.com/package/gitnexus) | **代码图谱** | Phase 3 自动构建索引（通过 Docker，绕过 Windows tree-sitter SIGSEGV），Phase 4 提供 context/impact 给子 agent |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | **模式来源** | grill-with-docs → plan-grill; tdd/ → docs/tdd/; git-guardrails → guardrails-git.ps1 + guardrails-git.sh; CONTEXT.md + ADR 模式 |
-| [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 4 的 4 个自动门（probe①¾ → scenario②½ → fix-per-task③ → security②¾）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
+| [autoresearch](https://github.com/uditgoenka/autoresearch) | **自动优化引擎** | Phase 4 的 3 个门禁（probe → security → optimize）。默认开启，`DEVFLOW_NO_AUTORESEARCH=1` 禁用 |
 | [screenshot-to-code](https://github.com/abi/screenshot-to-code) | **前端生成** | Phase 2 可选集成：截图/Figma 设计稿 → 前端代码。按需安装 |
 
 ### devflow 不做什么

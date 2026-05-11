@@ -4,39 +4,7 @@
 
 [中文版](README.md) • ![CI](https://github.com/TheonePro7/devflow/actions/workflows/ci.yml/badge.svg)
 
-devflow is a full-lifecycle product orchestrator skill for [Claude Code](https://claude.ai/code). It guides users from raw idea (Phase 1) through product design (Phase 2) and wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline with **beads** (issue tracking), **gitnexus** (code knowledge graph — via Docker, bypassing Windows tree-sitter compatibility issues), **autoresearch** (4 auto-gates), **screenshot-to-code** (frontend generation), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills). Even users without technical backgrounds can start from a vague idea and end with a shipped product.
-
----
-
-## Quick Start
-
-### A) Install as global CLI (recommended)
-
-```bash
-pip install git+https://github.com/TheonePro7/devflow.git
-
-# Verify
-devflow --version   # → devflow 1.0.0
-devflow doctor      # → environment diagnostics
-```
-
-Now `devflow state/sync/doctor` works in any project with a `.devflow/state` file.
-
-### B) Full 5-phase injection into a project
-
-**Prerequisites:** Go, Node.js >= 18, Git.
-
-```bash
-git clone https://github.com/TheonePro7/devflow.git ~/.claude/skills/devflow
-cd your-project
-bash ~/.claude/skills/devflow/install.sh
-```
-
-The installer installs beads/gitnexus/autoresearch, registers hooks, writes CLAUDE.md supreme directives, and creates `.devflow/state` + docs/.
-
-After install, type `用 devflow 开发` in Claude Code to start the 5-phase flow.
-
-See [Install & Setup](#install--setup) for offline/proxy/Windows options.
+devflow is a full-lifecycle product orchestrator skill for [Claude Code](https://claude.ai/code). It guides users from raw idea (Phase 1) through product design (Phase 2) and wraps the [superpowers](https://github.com/obra/superpowers) 14-skill pipeline with **beads** (issue tracking), **gitnexus** (code knowledge graph — via Docker, bypassing Windows tree-sitter compatibility issues), **autoresearch** (3 gates: probe/security/optimize), **screenshot-to-code** (frontend generation), **plan-grill** (design cross-examination), **PRD-to-beads** (auto task splitting), and **TDD deep docs**. It also adopts Git guardrails, domain glossary (CONTEXT.md), and Architecture Decision Records (ADR) patterns from [mattpocock/skills](https://github.com/mattpocock/skills). Even users without technical backgrounds can start from a vague idea and end with a shipped product.
 
 ---
 
@@ -139,54 +107,37 @@ User requests a feature (from PRD)
     ▼
 ① superpowers-brainstorming
    devflow injects: beads epic + gitnexus context + CONTEXT.md
+   ★ HARD GATE: user approval required before writing code
     │
     ▼
-①½ PLAN-GRILL (HITL gate)
-   Cross-examine design with CONTEXT.md + ADR + gitnexus
-   Pass/fail decision by human
-    │
-    ▼
-①¾ AUTORESEARCH PROBE ★ auto
+①½ AUTORESEARCH PROBE ★ HARD GATE
    /autoresearch:probe — 8 adversarial personas find hidden constraints
+   Skip: set gate_probe=skipped
     │
     ▼
 ② superpowers-writing-plans
    devflow injects: beads sub-issues + gitnexus impact + PRD→beads auto-split
     │
     ▼
-②½ AUTORESEARCH SCENARIO ★ auto
-   /autoresearch:scenario — 12-dimension edge case generation
-    │
-    ▼
 ③ superpowers-subagent-driven-development
-   devflow injects: gitnexus context + beads ready + TDD deep docs
-   ┌─ per-task: AUTORESEARCH:FIX zero-error gate ──────┐
-   │ /autoresearch:fix --target "npm run build && npm test" │
-   └────────────────────────────────────────────────────┘
+   devflow injects: gitnexus context + beads ready + TDD docs
+   per-task: spec-reviewer → quality-reviewer → requesting-code-review
     │
     ▼
-superpowers-requesting-code-review
-    │
-    ▼
-②¾ AUTORESEARCH SECURITY ★ auto
+②¾ AUTORESEARCH SECURITY ★ HARD GATE
    /autoresearch:security --diff — STRIDE + OWASP Top 10 + red team audit
+   Critical/High findings must be fixed before finish
+   Skip: set gate_security=skipped
+    │
+    ▼
+③¼ AUTORESEARCH OPTIMIZE (interactive loop)
+   plan→modify→verify→keep/discard→log→repeat
     │
     ▼
 superpowers-finishing-a-development-branch
 
 Background: Git guardrails PreToolUse hook (always active)
 ```
-
-### Plan-Grill Gate
-
-The plan-grill is a **mandatory human-in-the-loop gate** between brainstorming and writing-plans:
-
-1. **Vocabulary verification** — Check all design terms against CONTEXT.md glossary
-2. **ADR consistency** — Verify design doesn't conflict with past architecture decisions
-3. **Code fact checking** — Use `bash scripts/gitnexus-docker.sh context <symbol>` to verify referenced code exists (requires Docker Desktop)
-4. **Dependency check** — Use `bd dep check` or `bd ready` to find unresolved blockers
-5. **Edge case invention** — Proactively identify uncovered scenarios
-6. **Output grill report** — Document term changes, blind spots found, and ADR alignment
 
 ---
 
@@ -312,14 +263,13 @@ bash scripts/prd-to-beads.sh -d docs/design.md -e "Feature Title"
 
 ### 5. Auto-Research Gates (autoresearch)
 
-4 automatic gates along the pipeline, **HARD ENFORCED** with 3-layer mechanism (state tracking + hook interception + SKILL.md instructions):
+3 gates along the pipeline, **HARD ENFORCED** with 3-layer mechanism (state tracking + hook interception + SKILL.md instructions):
 
 | Gate | Trigger | Purpose | Enforcement |
 |------|---------|---------|-------------|
-| **Probe** (①¾) | After grill | 8 adversarial personas find hidden constraints | PreToolUse blocks `plans` step if gate_probe != done |
-| **Scenario** (②½) | After plans | 12-dimension edge case generation | PreToolUse blocks `impl` step if gate_scenario != done |
-| **Fix** (③) | Per-task | Iterative zero-error gate before next task | SKILL.md per-task lock (mark gate_fix=done to proceed) |
+| **Probe** (①½) | After brainstorming | 8 adversarial personas find hidden constraints | PreToolUse blocks `plans` step if gate_probe != done |
 | **Security** (②¾) | Before finish | STRIDE + OWASP + red team audit | PreToolUse blocks `finish` step if gate_security != done |
+| **Optimize** (③¼) | After security | Interactive loop: plan→modify→verify→keep/discard→log | Agent-driven, no hard block |
 
 Tracked in `.devflow/state` as `gate_probe`, `gate_scenario`, `gate_fix`, `gate_security` (values: pending, done, skipped).
 
@@ -625,7 +575,7 @@ This project incorporates design patterns and concepts inspired by:
 | [beads](https://github.com/gastownhall/beads) | Task tracking | Auto-installed in Phase 3, creates/updates/closes issues |
 | [gitnexus](https://www.npmjs.com/package/gitnexus) | Code graph | Auto-analyzed in Phase 3 (via Docker, bypassing Windows tree-sitter SIGSEGV), provides context/impact to sub-agents |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | Pattern source | Grill-with-docs → plan-grill; TDD docs; git guardrails; CONTEXT.md + ADR patterns |
-| [autoresearch](https://github.com/uditgoenka/autoresearch) | Auto-optimization | 4 automatic gates (probe → scenario → fix → security). ON by default |
+| [autoresearch](https://github.com/uditgoenka/autoresearch) | Auto-optimization | 3 gates (probe → security → optimize). ON by default |
 | [screenshot-to-code](https://github.com/abi/screenshot-to-code) | Frontend generation | Phase 2: convert screenshots/Figma to production code (optional) |
 
 ### What devflow doesn't do

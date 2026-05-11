@@ -1,6 +1,6 @@
 # devflow-state-check.ps1
-# UserPromptSubmit hook — injects current devflow state as context.
-# Reads .devflow/state and outputs a reminder message.
+# UserPromptSubmit hook — injects current devflow state + Phase 4 step guidance.
+# Reads .devflow/state and outputs a structured reminder with next-step instructions.
 
 $projectRoot = & git rev-parse --show-toplevel 2>$null
 if (-not $projectRoot) { $projectRoot = "." }
@@ -13,20 +13,27 @@ if (Test-Path $stateFile) {
         $phase = $state.phase
         $step = $state.step
         $feature = $state.feature
+        $featurePart = if ([string]::IsNullOrEmpty($feature)) { "" } else { "功能: $feature" }
 
-        if ([string]::IsNullOrEmpty($feature)) {
-            @{
-                systemMessage = "⚙️ devflow: 当前没有进行中的功能。如果用户提出新想法，请先读取 .devflow/state 并按 phase 阶段执行，不要直接写代码。"
-            } | ConvertTo-Json -Compress
-        } elseif ($phase -eq 4) {
-            $gateInfo = ""
-            if ($null -ne $state.gate_probe) {
-                $gateInfo = " | 门禁: probe=$($state.gate_probe) scenario=$($state.gate_scenario) fix=$($state.gate_fix) security=$($state.gate_security)"
-            }
-            @{
-                systemMessage = "⚙️ devflow 状态追踪: [Phase $phase] [Step: $step] 功能: $feature$gateInfo。请按 devflow 流程执行当前步骤，门禁未完成会被 Hook 拦截。"
-            } | ConvertTo-Json -Compress
+        # Phase 4 step-specific guidance
+        $guidance = ""
+        $stepActions = @{
+            "brainstorming" = "下一步: 调用 /brainstorming 技能进行设计探索"
+            "probe"         = "下一步: 调用 /autoresearch:probe 检查隐藏约束"
+            "writing-plans" = "下一步: 调用 /writing-plans 生成实施计划"
+            "subagent-dev"  = "下一步: 调用 /subagent-driven-development 执行开发"
+            "impl"          = "下一步: 调用 /subagent-driven-development 或 /executing-plans 执行"
+            "security"      = "下一步: 调用 /autoresearch:security --diff 审计"
+            "finish-branch" = "下一步: 调用 /finishing-a-development-branch 完成分支"
         }
+        if ($phase -eq 4 -and $stepActions.ContainsKey($step)) {
+            $guidance = " | $($stepActions[$step])"
+        }
+
+        @{
+            systemMessage = "⚙️ devflow: [Phase $phase] [Step: $step] $featurePart$guidance"
+        } | ConvertTo-Json -Compress
+
     } catch {
         @{
             systemMessage = "⚙️ devflow: state 文件解析失败，请检查 .devflow/state 格式。"
@@ -34,6 +41,6 @@ if (Test-Path $stateFile) {
     }
 } else {
     @{
-        systemMessage = "⚙️ devflow: .devflow/state 不存在。需要先运行 setup 完成初始化。"
+        systemMessage = "⚙️ devflow: .devflow/state 不存在。新项目请运行 setup.sh 或输入 '用devflow 开发' 自动初始化。"
     } | ConvertTo-Json -Compress
 }

@@ -172,7 +172,8 @@
       "PowerShell(Set-Location \"F:\\\\AI\\\\memory\"; powershell -File F:\\\\AI\\\\devflow\\\\install.ps1 2>&1)",
       "Bash(python -m pytest tests/ -v --tb=short)",
       "Bash(python -m pytest tests/ -v --tb=short -k \"not transition_rollback\")",
-      "Bash(python -m pytest tests/test_integration.py -v --tb=short -k \"rollback\")"
+      "Bash(python -m pytest tests/test_integration.py -v --tb=short -k \"rollback\")",
+      "Edit(~/.claude/skills/devflow/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Administrator\\.claude\\skills\\superpowers-brainstorming",
@@ -192,7 +193,9 @@
       "F:\\AI\\cut\\.claude",
       "F:\\AI\\note\\.claude",
       "f:\\AI",
-      "F:\\AI\\devflow"
+      "F:\\AI\\devflow",
+      "F:\\AI\\devflow\\.claude\\hooks",
+      "E:\\xinxiang\\.claude"
     ]
   },
   "hooks": {

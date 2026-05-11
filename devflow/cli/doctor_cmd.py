@@ -46,7 +46,8 @@ def run_doctor(args: argparse.Namespace):
         n_fail = sum(1 for _, (ok, _) in checks if not ok)
         print(f"  ⚠️  发现 {n_fail} 个问题")
         if fix:
-            print(f"  --fix 模式将在后续版本实现\n")
+            _fix_superpowers_settings(project_path)
+            _fix_issues(project_path)
         else:
             print(f"  运行 devflow doctor --fix 尝试自动修复\n")
 
@@ -171,3 +172,84 @@ def _check_docker() -> tuple[bool, str]:
     except Exception:
         pass
     return True, "未安装（非必需）"
+
+
+# ── --fix 逻辑 ──────────────────────────────────────────────
+
+
+REQUIRED_SUPERPOWERS = [
+    "superpowers-brainstorming",
+    "superpowers-writing-plans",
+    "superpowers-using-git-worktrees",
+    "superpowers-subagent-driven-development",
+    "superpowers-requesting-code-review",
+    "superpowers-finishing-a-development-branch",
+    "superpowers-test-driven-development",
+]
+
+
+def _get_settings_path(project_path: Path) -> Path:
+    """获取项目级 settings.json 路径。"""
+    return project_path / ".claude" / "settings.json"
+
+
+def _load_settings(path: Path) -> dict:
+    if path.exists():
+        try:
+            import json
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, IOError):
+            pass
+    return {}
+
+
+def _save_settings(path: Path, data: dict):
+    import json
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _fix_superpowers_settings(project_path: Path):
+    """自动补全 settings.json 的 additionalDirectories 中缺失的 superpowers skill。"""
+    print(f"  🔧 检查 superpowers additionalDirectories...\n")
+
+    settings_path = _get_settings_path(project_path)
+    if not settings_path.exists():
+        print(f"      ⚠️  .claude/settings.json 不存在，跳过\n")
+        return
+
+    import json
+    settings = _load_settings(settings_path)
+    dirs = settings.setdefault("permissions", {}).setdefault("additionalDirectories", [])
+    home = Path.home()
+    skill_base = home / ".claude" / "skills"
+
+    # 标准化已存在的路径
+    norm_existing = {p.replace("\\", "/").lower().rstrip("/") for p in dirs}
+
+    added = []
+    for name in REQUIRED_SUPERPOWERS:
+        skill_dir = skill_base / name
+        if skill_dir.exists():
+            norm = str(skill_dir).replace("\\", "/").lower().rstrip("/")
+            if norm not in norm_existing:
+                dirs.append(str(skill_dir))
+                norm_existing.add(norm)
+                added.append(name)
+
+    if added:
+        _save_settings(settings_path, settings)
+        print(f"      ✅ 已添加 {len(added)} 个缺失的 superpowers skill:")
+        for name in added:
+            print(f"         - {name}")
+        print()
+    else:
+        print(f"      ✅ 所有 superpowers skill 已配置\n")
+
+
+def _fix_issues(project_path: Path):
+    """其他修复（placeholder）。"""
+    pass

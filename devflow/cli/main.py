@@ -109,11 +109,11 @@ def main(argv: list[str] | None = None):
     p_doctor.set_defaults(func=run_doctor)
 
     # dev
-    p_dev = subparsers.add_parser("dev", help="开发循环（start/finish/next/status）")
+    p_dev = subparsers.add_parser("dev", help="开发循环（brainstorm/execute/start/finish/next/status）")
     p_dev.add_argument("--path", help="项目路径（默认当前目录）")
-    p_dev.add_argument("action", choices=["start", "finish", "next", "status"],
-                       help="操作: start=<task-id> 开始开发, finish=<task-id> 完成, next 下一个, status 概览")
-    p_dev.add_argument("task_id", nargs="?", help="task ID（start/finish 时需要）")
+    p_dev.add_argument("action", choices=["brainstorm", "execute", "start", "finish", "next", "status"],
+                       help="操作: brainstorm=<task-id> 启动设计探索, execute=<plan-file> 执行管道, start=<task-id> 开始, finish=<task-id> 完成, next 下一个, status 概览")
+    p_dev.add_argument("task_id", nargs="?", help="task ID 或 plan/design 文件路径（brainstorm/start/finish 时需要）")
     p_dev.set_defaults(func=run_dev)
 
     # task
